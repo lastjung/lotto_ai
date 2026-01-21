@@ -246,13 +246,18 @@ function animateViz() {
     const totalLines = lines.length;
     const lineActivations = {}; // 각 선의 활성화 값 저장
     
+    // 주파수 대역 매핑: 전체 선을 주파수 데이터 범위(약 70%)에 골고루 분포
+    const freqRange = Math.floor(dataArray.length * 0.7); 
+    
     lines.forEach((line, idx) => {
-        // 주파수 대역 5~60 범위로 분배 (모든 레이어가 반응하도록)
-        const binIdx = 5 + Math.floor((idx / totalLines) * 55);
+        // 전체 선 개수 대비 비율로 주파수 인덱스 할당 (0 ~ freqRange)
+        const binIdx = 2 + Math.floor((idx / totalLines) * freqRange);
         const val = dataArray[binIdx] || 0;
         const weight = parseFloat(line.getAttribute("data-weight")) || 0.5;
         const effectiveVal = val * weight;
-        const hue = (idx / totalLines) * 360;
+        
+        // HSL 색상도 전체 스펙트럼(0~360)을 순환하도록 설정
+        const hue = 200 + ((idx / totalLines) * 160); // 파란색(200) ~ 빨간색(360) 범위 사용
         
         // 선 ID에서 목적지 노드 추출 (line-21-31 → 31)
         const lineId = line.getAttribute("id");
