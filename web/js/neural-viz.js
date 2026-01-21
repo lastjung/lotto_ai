@@ -335,16 +335,23 @@ function renderNetwork() {
   const height = 500;
   nnSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 
-  const layerSpacing = width / (layers.length + 1);
+  // 모바일은 꽉 차게(20px), 태블릿 이상은 여백 유지(12%)
+  const isMobile = width < 768;
+  const marginX = isMobile ? 20 : width * 0.12; 
+  const marginY = 60; 
+  const innerWidth = width - (marginX * 2);
+  const innerHeight = height - (marginY * 2);
+
+  const layerSpacing = layers.length > 1 ? innerWidth / (layers.length - 1) : 0;
 
   // 1. Calculate positions
   layers.forEach((count, lIdx) => {
-    const x = layerSpacing * (lIdx + 1);
-    const nodeSpacing = height / (count + 1);
+    const x = layers.length > 1 ? marginX + (layerSpacing * lIdx) : width / 2;
+    const nodeSpacing = count > 1 ? innerHeight / (count - 1) : 0;
     const layerNodes = [];
 
     for (let nIdx = 0; nIdx < count; nIdx++) {
-      const y = nodeSpacing * (nIdx + 1);
+      const y = count > 1 ? marginY + (nodeSpacing * nIdx) : height / 2;
       const nodeId = `${lIdx + 1}${nIdx + 1}`;
       layerNodes.push({ id: nodeId, x, y, layer: lIdx });
     }
