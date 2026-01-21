@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎱 AI 로또 번호 생성기</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <button class="sound-toggle" id="soundToggle" title="사운드 켜기/끄기">🔊</button>
+
+    <h1>🎱 AI 로또 번호 생성기</h1>
+    <div class="subtitle">AI 기반 차세대 로또 번호 예측 시스템</div>
+
+    <!-- 탭 메뉴 -->
+    <div class="tab-menu">
+        <button class="tab-btn active" data-tab="tab-lotto">🎱 로또번호 추첨</button>
+        <button class="tab-btn" data-tab="tab-nn">🧠 신경망 시각화</button>
+    </div>
+
+    <!-- 탭 1: 로또 머신 -->
+    <div id="tab-lotto" class="tab-content active-content" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+        <div class="lotto-machine">
+            <!-- 세트 수 선택 -->
+            <div class="set-selector">
+                <label>세트 수:</label>
+                <button class="set-btn" data-sets="1">1</button>
+                <button class="set-btn" data-sets="2">2</button>
+                <button class="set-btn" data-sets="3">3</button>
+                <button class="set-btn active" data-sets="5">5</button>
+            </div>
+
+            <!-- 모델 선택 (클릭하면 바로 생성) -->
+            <div class="model-selector">
+                <button class="model-option" data-model="transformer" id="btnTransformer">
+                    <span class="icon">🤖</span>
+                    <span class="name">Transformer</span>
+                    <span class="desc">시퀀스 패턴 학습</span>
+                </button>
+                <button class="model-option" data-model="gan" id="btnGan">
+                    <span class="icon">🎭</span>
+                    <span class="name">GAN</span>
+                    <span class="desc">적대적 생성</span>
+                </button>
+                <button class="model-option" data-model="random" id="btnRandom">
+                    <span class="icon">🎲</span>
+                    <span class="name">랜덤</span>
+                    <span class="desc">완전 무작위</span>
+                </button>
+                <button class="model-option dream-btn" id="btnDream">
+                    <span class="icon">🔮</span>
+                    <span class="name">AI 해몽</span>
+                    <span class="desc">꿈으로 번호 생성</span>
+                </button>
+            </div>
+
+            <!-- 해몽 입력창 (숨김) -->
+            <div class="dream-input-container" id="dreamInputContainer" style="display: none;">
+                <div class="dream-input-wrapper">
+                    <textarea id="dreamText" placeholder="어젯밤 어떤 꿈을 꾸셨나요? 예: 뱀이 나와서 도망쳤어요..."></textarea>
+                    <button class="dream-submit-btn" id="dreamSubmitBtn">🔮 해몽하기</button>
+                </div>
+                <div class="dream-result" id="dreamResult" style="display: none;">
+                    <h4>🌙 해몽 결과</h4>
+                    <p id="dreamInterpretation"></p>
+                    <div id="dreamSymbols" class="dream-symbols"></div>
+                </div>
+            </div>
+
+            <!-- 공 표시 영역 -->
+            <div class="ball-container" id="ballContainer">
+                <p class="guide-message">👆 위 모델 중 하나를 클릭하세요</p>
+            </div>
+
+            <!-- 초기화 버튼 -->
+            <button class="clear-btn" id="clearBtn">🗑️ 초기화</button>
+
+            <!-- 기록 -->
+            <div class="history" id="history" style="display: none;">
+                <h3>📋 생성 기록</h3>
+                <div id="historyList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 탭 2: 신경망 시각화 -->
+    <div id="tab-nn" class="tab-content" style="display: none; width: 100%;">
+        <div class="nn-container" style="margin-top: 0;">
+            <div class="nn-header">
+                <div class="nn-title">🧠 Neural Network Visualizer</div>
+                <div class="nn-controls">
+                    <div class="nn-slider-group">
+                        <label>FLOW SPEED</label>
+                        <input type="range" id="nnSpeed" class="nn-speed-slider" min="100" max="1000" value="400" step="50">
+                    </div>
+                    <div class="nn-input-group">
+                        <label>구조 (컴마로 구분)</label>
+                        <input type="text" id="nnStructure" class="nn-input" value="3, 4, 4, 1" placeholder="예: 3,4,4,1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="viz-area">
+                <svg id="nnSvg"></svg>
+            </div>
+
+            <div class="command-bar">
+                <button id="nnRandomBtn" class="exec-btn" style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);">🎨 RANDOM COLOR</button>
+                <button id="nnAutoBtn" class="exec-btn" style="background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);">⚡ AUTO FLOW</button>
+                <input type="file" id="musicFile" accept="audio/*" style="display: none;">
+                <button id="nnMusicBtn" class="exec-btn">🎵 MUSIC SYNC</button>
+                <select id="musicSelect" class="exec-btn" style="background: linear-gradient(135deg, #2d3436 0%, #636e72 100%); padding: 8px 15px; cursor: pointer;">
+                    <option value="default" selected>🎹 Default (Q Train)</option>
+                    <option value="custom">📂 내 음악 선택...</option>
+                </select>
+            </div>
+            <p style="font-size: 0.8rem; color: #666; margin-top: 10px; text-align: center;">
+                RANDOM: 무작위 색상 | AUTO: 실시간 흐름 효과 | MUSIC: 음악 연동 시각화
+            </p>
+        </div>
+    </div>
+
+    <footer>
+        <p>⚠️ AI 예측은 재미용이며 당첨을 보장하지 않습니다.</p>
+        <p>Powered by <a href="#">Transformer & GAN</a></p>
+    </footer>
+
+    <!-- Main Logic + Tabs -->
+    <script src="js/main.js"></script>
+    <!-- Neural Viz Logic -->
+    <script src="js/neural-viz.js"></script>
+</body>
+
+</html>

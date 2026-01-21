@@ -1,0 +1,28 @@
+{
+    "model": {
+        "num_balls": 45,
+        "d_model": 64,
+        "nhead": 4,
+        "num_layers": 2,
+        "dim_feedforward": 256,
+        "dropout": 0.1,
+        "seq_len": 20,
+        "input_nums": 1,
+        "output_nums": 1
+    },
+    "training": {
+        "epochs": 100,
+        "batch_size": 32,
+        "learning_rate": 0.001,
+        "weight_decay": 0.01,
+        "train_ratio": 0.8
+    },
+    "generation": {
+        "temperature": 1.0,
+        "top_k": 10
+    },
+    "paths": {
+        "data": "data/draws.json",
+        "checkpoint": "models/transformer/bonus_model.pt"
+    }
+}
