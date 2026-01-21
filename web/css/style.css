@@ -534,6 +534,7 @@ footer a {
   font-weight: 800;
   background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -595,9 +596,7 @@ footer a {
   cursor: pointer;
 }
 
-.node.connected {
-  /* JS에서 동적으로 설정된 fill-opacity와 함께 작동 */
-}
+/* .node.connected style reserved for dynamic JS updates */
 
 /* Slider Styles */
 .nn-slider-group {
@@ -618,6 +617,7 @@ footer a {
 
 input[type="range"].nn-speed-slider {
   -webkit-appearance: none;
+  appearance: none;
   width: 100px;
   height: 4px;
   background: #3a3a5a;
@@ -767,4 +767,114 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
 }
 #nnMusicBtn:hover {
     box-shadow: 0 5px 15px rgba(255, 0, 128, 0.4);
+}
+
+/* === Responsive Design (Mobile Support) === */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    .subtitle {
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+    }
+
+    /* Lotto Machine Mobile */
+    .lotto-machine {
+        padding: 20px;
+        border-radius: 20px;
+    }
+
+    .model-selector {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .model-option {
+        padding: 15px 10px;
+    }
+
+    .model-option .name {
+        font-size: 0.9rem;
+    }
+
+    .model-option .desc {
+        display: none; /* 모바일에서 설명 숨김 */
+    }
+
+    /* Neural Network Mobile */
+    .nn-container {
+        padding: 20px;
+        border-radius: 20px;
+        margin-top: 20px;
+    }
+
+    .nn-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .nn-title {
+        font-size: 1.4rem;
+    }
+
+    .nn-controls {
+        width: 100%;
+        gap: 10px;
+    }
+
+    .nn-slider-group, .nn-input-group {
+        width: 100%;
+    }
+
+    .nn-input {
+        width: 100%;
+    }
+
+    .viz-area {
+        height: 350px; /* 모바일에서 높이 축소 */
+    }
+
+    .command-bar {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px !important;
+    }
+
+    .exec-btn, #musicSelect {
+        width: 100%;
+        padding: 12px 20px !important;
+        font-size: 1rem !important;
+        justify-content: center;
+    }
+
+    .tab-btn {
+        padding: 8px 15px;
+        font-size: 0.9rem;
+    }
+
+    footer {
+        font-size: 0.75rem;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+    .model-selector {
+        grid-template-columns: 1fr;
+    }
+    
+    .viz-area {
+        height: 300px;
+    }
+    
+    .nn-title {
+        font-size: 1.2rem;
+    }
 }
