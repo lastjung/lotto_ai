@@ -206,15 +206,96 @@ class NeuralNetworkViz {
       this.autoFlowInterval = null;
       // Reset UI to clean state provided we have the structure to redraw or just clear styles
       // Re-rendering is the cleanest way to reset 'active' styles
-      if (this.svg && this.nodesData.length > 0) {
-          // Re-trigger render to clear styles? 
-          // Since render needs structureStr, we can perhaps just reset styles manually or ask caller to re-render.
-          // Original code did: renderNetwork() // Full UI Reset
-          // We can't easily call render without the structure string here.
-          // Ideally we should store the structure string or just implement a visual reset.
-          // For now, I will assume the caller will handle re-render if needed, 
-          // OR I can store the last structure string.
-      }
     }
   }
+
+  resetVisuals() {
+    if (!this.svg) return;
+    
+    // Reset Nodes
+    const nodes = this.svg.querySelectorAll(".node");
+    nodes.forEach(n => {
+        n.setAttribute("r", "18");
+        n.style.fill = "rgba(22, 33, 62, 0.7)";
+        n.style.stroke = "#00f2fe";
+        n.style.strokeWidth = "2px";
+        n.style.filter = "none";
+    });
+    
+    // Reset Lines
+    const lines = this.svg.querySelectorAll(".conn-line");
+    lines.forEach(l => {
+        l.style.opacity = "0.1";
+        l.style.strokeWidth = "0.5";
+        l.style.stroke = "rgba(255,255,255,0.05)";
+    });
+  }
+
+  updateFromAudioData(audioData) {
+    if (!this.svg || !audioData) return;
+
+    const { data, sampleRate, fftSize } = audioData;
+    const lines = this.svg.querySelectorAll(".conn-line");
+    const totalLines = lines.length;
+    const lineActivations = {}; 
+    const binSize = sampleRate / fftSize;
+    const startBin = Math.floor(500 / binSize);
+    const endBin = Math.floor(6500 / binSize);
+    const usefulRange = endBin - startBin;
+    
+    lines.forEach((line, idx) => {
+        const seed = parseFloat(line.getAttribute("data-freq-seed")) || 0;
+        const binIdx = startBin + Math.floor(seed * usefulRange);
+        const val = data[binIdx] || 0;
+        const weight = parseFloat(line.getAttribute("data-weight")) || 0.5;
+        const effectiveVal = val * weight; 
+        const hue = 200 + ((idx / totalLines) * 160); 
+        
+        const lineId = line.getAttribute("id");
+        // line id format: line-startNodeId-endNodeId (e.g., line-11-21)
+        const targetNodeId = lineId.split("-")[2]; 
+        
+        if (!lineActivations[targetNodeId]) {
+            lineActivations[targetNodeId] = { sum: 0, maxHue: 0, count: 0 };
+        }
+        
+        if (effectiveVal > 15) {
+            line.style.opacity = Math.min(1, (effectiveVal / 100) + 0.2);
+            const lightness = 50 + (effectiveVal / 100) * 25;
+            line.style.stroke = `hsl(${hue}, 100%, ${lightness}%)`; 
+            line.style.strokeWidth = 1.0 + (effectiveVal / 100) * 4;
+
+            lineActivations[targetNodeId].sum += effectiveVal;
+            lineActivations[targetNodeId].maxHue = Math.max(lineActivations[targetNodeId].maxHue, hue);
+            lineActivations[targetNodeId].count++;
+        } else {
+            line.style.opacity = 0.1;
+            line.style.strokeWidth = 0.5;
+            line.style.stroke = "rgba(255,255,255,0.05)";
+        }
+    });
+
+    const nodes = this.svg.querySelectorAll(".node");
+    nodes.forEach((node) => {
+        const nodeId = node.getAttribute("id").replace("node-", ""); 
+        const incoming = lineActivations[nodeId];
+        const baseRadius = 18;
+        if (incoming && incoming.sum > 0) {
+            const sizeFactor = 0.5 + (incoming.sum / 255) * 0.5;
+            node.setAttribute("r", baseRadius * sizeFactor);
+            const avgActivation = incoming.sum / incoming.count;
+            const nodeLightness = 50 + (avgActivation / 255) * 20;
+            const nodeHue = incoming.maxHue; 
+            node.style.fill = `hsl(${nodeHue}, 100%, ${nodeLightness}%)`;
+            node.style.fillOpacity = "0.6";
+            node.style.filter = `drop-shadow(0 0 8px hsl(${nodeHue}, 100%, 60%))`;
+        } else {
+            node.setAttribute("r", baseRadius);
+            node.style.fill = "rgba(22, 33, 62, 0.5)";
+            node.style.fillOpacity = "0.3";
+            node.style.filter = "none";
+        }
+    });
+  }
 }
+
