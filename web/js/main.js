@@ -430,7 +430,7 @@ window.addEventListener('load', () => {
             const targetId = btn.dataset.tab;
             tabContents.forEach(content => {
                 if(content.id === targetId) {
-                    content.style.display = 'block'; // Or 'flex' depending on design
+                    content.style.display = (targetId === 'tab-nn') ? 'flex' : 'block';
                     // Resize NN if switched to it (to fix svg size issues)
                     if(targetId === 'tab-nn' && typeof renderNetwork === 'function') {
                        setTimeout(renderNetwork, 50); 

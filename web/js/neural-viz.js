@@ -1,194 +1,195 @@
-// neural-viz.js (Main Entry & Initializer)
-// 1단계 리팩토링 완료: Core 로직은 nn-core.js로 이동됨
+// neural-viz.js (Controller)
+// 2단계 리팩토링 완료: Audio 로직은 NeuralAudioEngine 클래스로 독립 (audio-engine.js)
 
+let nnViz; // Instance of NeuralNetworkViz (nn-core.js)
+let nnAudio; // Instance of NeuralAudioEngine (audio-engine.js)
+
+// UI Elements
 let nnSvg;
 let nnStructureInput;
 let nnRandomBtn;
 let nnAutoBtn;
-
-// Audio Viz Variables
-let audioCtxViz = null;
-let analyser = null;
-let dataArray = null;
-let source = null;
-let animationId = null;
-let isMusicSyncing = false;
 let musicBtn = null;
 let musicInput = null;
 
-let nodesData = []; // Store node coordinates
-let layersInfo = [];
-let autoFlowInterval = null;
+let animationId = null;
+let isMusicSyncing = false;
 
 function initNN() {
-  nnSvg = document.getElementById("nnSvg");
-  nnStructureInput = document.getElementById("nnStructure");
-  nnRandomBtn = document.getElementById("nnRandomBtn");
-  nnAutoBtn = document.getElementById("nnAutoBtn");
-  musicBtn = document.getElementById("nnMusicBtn");
-  musicInput = document.getElementById("musicFile");
-  const musicSelect = document.getElementById("musicSelect");
+    nnSvg = document.getElementById("nnSvg");
+    nnStructureInput = document.getElementById("nnStructure");
+    nnRandomBtn = document.getElementById("nnRandomBtn");
+    nnAutoBtn = document.getElementById("nnAutoBtn");
+    musicBtn = document.getElementById("nnMusicBtn");
+    musicInput = document.getElementById("musicFile");
+    const musicSelect = document.getElementById("musicSelect");
 
-  if (nnSvg) {
-      renderNetwork();
-      window.addEventListener("resize", renderNetwork);
-  }
-
-  if (nnStructureInput) {
-      nnStructureInput.addEventListener("input", renderNetwork);
-  }
-  if (nnRandomBtn) {
-      nnRandomBtn.addEventListener("click", randomizeConnectionColors);
-  }
-  if (nnAutoBtn) {
-      nnAutoBtn.addEventListener("click", toggleAutoFlow);
-  }
-
-  if (musicBtn && musicSelect) {
-      musicBtn.addEventListener("click", () => {
-          if (isMusicSyncing) {
-              stopMusicVisualizer();
-              return;
-          }
-          
-          const selectedValue = musicSelect.value;
-          if (selectedValue === "default") {
-              startMusicVisualizer("music/music.mp3");
-          } else if (selectedValue === "inaban") {
-              startMusicVisualizer("music/Speedy Gonzalo - Inaban.mp3");
-          } else if (selectedValue === "custom") {
-              musicInput.click();
-          }
-      });
-      
-      musicSelect.addEventListener("change", () => {
-          if (musicSelect.value === "custom") {
-              musicInput.click();
-          }
-      });
-      
-      musicInput.addEventListener("change", (e) => {
-          const file = e.target.files[0];
-          if (file) {
-              startMusicVisualizerFromFile(file);
-          }
-      });
-  }
-}
-
-function startMusicVisualizer(url) {
-    if (autoFlowInterval) toggleAutoFlow(); 
-    if (isMusicSyncing) stopMusicVisualizer();
-
-    isMusicSyncing = true;
-    if (musicBtn) {
-        musicBtn.textContent = "⏹ STOP MUSIC";
-        musicBtn.style.background = "linear-gradient(135deg, #ff7675 0%, #d63031 100%)";
+    // 1. Initialize Visual Engine
+    if (nnSvg) {
+        nnViz = new NeuralNetworkViz(nnSvg);
+        renderNetwork();
+        window.addEventListener("resize", renderNetwork);
     }
 
-    fetch(url)
-        .then(response => {
-            if (!response.ok) throw new Error("Music file not found");
-            return response.arrayBuffer();
-        })
-        .then(arrayBuffer => {
-            audioCtxViz = new (window.AudioContext || window.webkitAudioContext)();
-            
-            audioCtxViz.decodeAudioData(arrayBuffer, (buffer) => {
-                if (!isMusicSyncing) return;
+    // 2. Initialize Audio Engine
+    nnAudio = new NeuralAudioEngine();
 
-                source = audioCtxViz.createBufferSource();
-                source.buffer = buffer;
-                source.loop = true;
+    // 3. Bind UI Events
+    if (nnStructureInput) {
+        nnStructureInput.addEventListener("input", renderNetwork);
+    }
+    if (nnRandomBtn) {
+        nnRandomBtn.addEventListener("click", randomizeConnectionColors);
+    }
+    if (nnAutoBtn) {
+        nnAutoBtn.addEventListener("click", toggleAutoFlow);
+    }
 
-                analyser = audioCtxViz.createAnalyser();
-                analyser.fftSize = 2048; 
-                const bufferLength = analyser.frequencyBinCount;
-                dataArray = new Uint8Array(bufferLength);
-
-                source.connect(analyser);
-                analyser.connect(audioCtxViz.destination);
-                source.start(0);
-
-                animateViz();
-            }, (err) => {
-                console.error("Audio Decode Error:", err);
-                alert("오디오 파일을 처리할 수 없습니다.");
+    if (musicBtn && musicSelect) {
+        musicBtn.addEventListener("click", async () => {
+            if (isMusicSyncing) {
                 stopMusicVisualizer();
-            });
-        })
-        .catch(err => {
-            console.error("Fetch Error:", err);
-            alert("음악 파일을 불러올 수 없습니다. 로컬 서버가 필요할 수 있습니다.");
-            stopMusicVisualizer();
+                return;
+            }
+
+            const selectedValue = musicSelect.value;
+            let success = false;
+
+            if (selectedValue === "default") {
+                success = await startMusicVisualizer("music/music.mp3");
+            } else if (selectedValue === "inaban") {
+                success = await startMusicVisualizer("music/Speedy Gonzalo - Inaban.mp3");
+            } else if (selectedValue === "custom") {
+                musicInput.click();
+                return; // Wait for file input change
+            }
+            
+            if(!success && selectedValue !== "custom") {
+                 alert("음악 재생 실패");
+            }
         });
+
+        musicSelect.addEventListener("change", () => {
+             if (musicSelect.value === "custom") {
+                 musicInput.click();
+             }
+        });
+
+        musicInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                 startMusicVisualizerFromFile(file);
+            }
+        });
+    }
 }
 
-function startMusicVisualizerFromFile(file) {
-    if (autoFlowInterval) toggleAutoFlow(); 
+// =========================================
+// Wrapper Functions (Bridge)
+// =========================================
+
+function renderNetwork() {
+    if (nnViz && nnStructureInput) {
+        nnViz.render(nnStructureInput.value);
+    }
+}
+
+function randomizeConnectionColors() {
+    if (nnViz) nnViz.randomizeConnectionColors();
+    if (typeof playSound === "function") playSound("click");
+}
+
+function toggleAutoFlow() {
+    if (!nnViz) return;
+
+    if (nnViz.autoFlowInterval) {
+        // Stop Flow
+        nnViz.stopAutoFlow();
+        if (nnAutoBtn) {
+            nnAutoBtn.textContent = "AUTO FLOW";
+            nnAutoBtn.style.background = "linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%)";
+        }
+        renderNetwork(); // Visually reset
+    } else {
+        // Start Flow
+        if (isMusicSyncing) stopMusicVisualizer(); // Exclusive mode
+
+        if (nnAutoBtn) {
+            nnAutoBtn.textContent = "STOP FLOW";
+            nnAutoBtn.style.background = "linear-gradient(135deg, #ff7675 0%, #d63031 100%)";
+        }
+
+        const startFlow = () => {
+            const speedVal = parseInt(document.getElementById("nnSpeed").value);
+            nnViz.startAutoFlow(speedVal);
+        };
+
+        startFlow();
+
+        const speedInput = document.getElementById("nnSpeed");
+        if (speedInput) {
+            speedInput.oninput = (e) => {
+                if (nnViz.autoFlowInterval) nnViz.startAutoFlow(parseInt(e.target.value));
+            };
+        }
+    }
+    if (typeof playSound === "function") playSound("click");
+}
+
+// =========================================
+// Music Visualization Logic (Controller)
+// =========================================
+
+async function startMusicVisualizer(url) {
+    if (nnViz && nnViz.autoFlowInterval) toggleAutoFlow();
     if (isMusicSyncing) stopMusicVisualizer();
 
     isMusicSyncing = true;
-    if (musicBtn) {
-        musicBtn.textContent = "⏹ STOP MUSIC";
-        musicBtn.style.background = "linear-gradient(135deg, #ff7675 0%, #d63031 100%)";
-    }
+    updateMusicButtonState(true);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const arrayBuffer = e.target.result;
-        audioCtxViz = new (window.AudioContext || window.webkitAudioContext)();
-        
-        audioCtxViz.decodeAudioData(arrayBuffer, (buffer) => {
-            if (!isMusicSyncing) return;
-
-            source = audioCtxViz.createBufferSource();
-            source.buffer = buffer;
-            source.loop = true;
-
-            analyser = audioCtxViz.createAnalyser();
-            analyser.fftSize = 2048; 
-            const bufferLength = analyser.frequencyBinCount;
-            dataArray = new Uint8Array(bufferLength);
-
-            source.connect(analyser);
-            analyser.connect(audioCtxViz.destination);
-            source.start(0);
-
-            animateViz();
-        }, (err) => {
-            console.error("Audio Decode Error:", err);
-            alert("오디오 파일을 처리할 수 없습니다.");
-            stopMusicVisualizer();
-        });
-    };
-    reader.onerror = () => {
-        alert("파일을 읽을 수 없습니다.");
+    const success = await nnAudio.loadFromUrl(url);
+    if (success) {
+        animateViz();
+    } else {
         stopMusicVisualizer();
-    };
-    reader.readAsArrayBuffer(file);
+    }
+    return success;
+}
+
+async function startMusicVisualizerFromFile(file) {
+    if (nnViz && nnViz.autoFlowInterval) toggleAutoFlow();
+    if (isMusicSyncing) stopMusicVisualizer();
+
+    isMusicSyncing = true;
+    updateMusicButtonState(true);
+
+    const success = await nnAudio.loadFromFile(file);
+    if (success) {
+        animateViz();
+    } else {
+        stopMusicVisualizer();
+        alert("파일을 재생할 수 없습니다.");
+    }
 }
 
 function stopMusicVisualizer() {
     isMusicSyncing = false;
-    if (source) {
-        try { source.stop(); } catch(e){}
-        source.disconnect();
-    }
-    if (audioCtxViz) {
-        audioCtxViz.close();
-    }
+    if (nnAudio) nnAudio.stop();
+    
     if (animationId) {
         cancelAnimationFrame(animationId);
+        animationId = null;
     }
     
-    if (musicBtn) {
-        musicBtn.textContent = "🎵 MUSIC SYNC";
-        musicBtn.style.background = "linear-gradient(135deg, #FF0080 0%, #7928CA 100%)";
-    }
+    updateMusicButtonState(false);
     
+    // Visually reset
     if (nnSvg) {
-        const nodes = nnSvg.querySelectorAll(".node");
+       // Since we don't have direct access to reset logic in Viz yet, 
+       // we can either re-render or explicitly clear styles.
+       // For now, let's keep the manual reset here or move it to Viz class later.
+       // Ideally: nnViz.resetVisuals();
+       const nodes = nnSvg.querySelectorAll(".node");
         nodes.forEach(n => {
             n.setAttribute("r", "18");
             n.style.fill = "rgba(22, 33, 62, 0.7)";
@@ -196,7 +197,6 @@ function stopMusicVisualizer() {
             n.style.strokeWidth = "2px";
             n.style.filter = "none";
         });
-        
         const lines = nnSvg.querySelectorAll(".conn-line");
         lines.forEach(l => {
             l.style.opacity = "0.1";
@@ -206,16 +206,37 @@ function stopMusicVisualizer() {
     }
 }
 
+function updateMusicButtonState(isPlaying) {
+    if (!musicBtn) return;
+    if (isPlaying) {
+        musicBtn.textContent = "⏹ STOP MUSIC";
+        musicBtn.style.background = "linear-gradient(135deg, #ff7675 0%, #d63031 100%)";
+    } else {
+        musicBtn.textContent = "🎵 MUSIC SYNC";
+        musicBtn.style.background = "linear-gradient(135deg, #FF0080 0%, #7928CA 100%)";
+    }
+}
+
+// =========================================
+// Main Animation Loop
+// =========================================
+
 function animateViz() {
     if (!isMusicSyncing) return;
     animationId = requestAnimationFrame(animateViz);
 
-    analyser.getByteFrequencyData(dataArray);
+    // 1. Get Audio Data
+    const audioData = nnAudio.getFrequencyData();
+    if (!audioData) return;
 
+    const { data, sampleRate, fftSize } = audioData;
+    
+    // 2. Process Data & Update Viz
+    // (This logic could be moved to nnViz.update(audioData) in step 3, but ok here for now)
     const lines = nnSvg.querySelectorAll(".conn-line");
     const totalLines = lines.length;
     const lineActivations = {}; 
-    const binSize = audioCtxViz.sampleRate / analyser.fftSize;
+    const binSize = sampleRate / fftSize;
     const startBin = Math.floor(500 / binSize);
     const endBin = Math.floor(6500 / binSize);
     const usefulRange = endBin - startBin;
@@ -223,7 +244,7 @@ function animateViz() {
     lines.forEach((line, idx) => {
         const seed = parseFloat(line.getAttribute("data-freq-seed")) || 0;
         const binIdx = startBin + Math.floor(seed * usefulRange);
-        const val = dataArray[binIdx] || 0;
+        const val = data[binIdx] || 0;
         const weight = parseFloat(line.getAttribute("data-weight")) || 0.5;
         const effectiveVal = val * weight; 
         const hue = 200 + ((idx / totalLines) * 160); 
@@ -274,5 +295,6 @@ function animateViz() {
     });
 }
 
-// 초기 실행
+// Initialize on Load
 window.addEventListener('load', initNN);
+
