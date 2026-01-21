@@ -18,7 +18,7 @@ body {
 }
 
 h1 {
-  font-size: 2.5rem;
+  font-size: 1.8rem;
   margin-bottom: 10px;
   text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
   background: linear-gradient(90deg, #ffd700, #ffaa00);
@@ -530,7 +530,7 @@ footer a {
 }
 
 .nn-title {
-  font-size: 1.8rem;
+  font-size: 1.4rem;
   font-weight: 800;
   background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
   -webkit-background-clip: text;
@@ -776,7 +776,7 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
     }
 
     h1 {
-        font-size: 1.8rem;
+        font-size: 1.5rem;
     }
 
     .subtitle {
@@ -821,7 +821,7 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
     }
 
     .nn-title {
-        font-size: 1.4rem;
+        font-size: 1.2rem;
     }
 
     .nn-controls {
