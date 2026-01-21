@@ -246,13 +246,30 @@ function animateViz() {
     const totalLines = lines.length;
     const lineActivations = {}; // 각 선의 활성화 값 저장
     
-    // 주파수 대역 매핑: 전체 선을 주파수 데이터 범위(약 70%)에 골고루 분포
-    const freqRange = Math.floor(dataArray.length * 0.7); 
+    // 주파수 매핑 전략: 
+    // - 하위 70% 선들: 저음~중음(BaseFreq) 할당
+    // - 상위 30% 선들(마지막 레이어 쪽): 고음(HighFreq) 할당 + 부스팅
+    const splitPoint = Math.floor(totalLines * 0.7); 
     
     lines.forEach((line, idx) => {
-        // 전체 선 개수 대비 비율로 주파수 인덱스 할당 (0 ~ freqRange)
-        const binIdx = 2 + Math.floor((idx / totalLines) * freqRange);
-        const val = dataArray[binIdx] || 0;
+        let val = 0;
+        
+        if (idx < splitPoint) {
+            // [0 ~ 70%] 구간: 저음~중음 (데이터의 앞쪽 50% 사용)
+            const binIdx = 2 + Math.floor((idx / splitPoint) * (dataArray.length * 0.5));
+            val = dataArray[binIdx] || 0;
+        } else {
+            // [70% ~ 100%] 구간: 고음 (데이터의 50% ~ 80% 구간 사용)
+            // 고음은 에너지가 약하므로 Boost (x2.5) 적용
+            const highRangeStart = Math.floor(dataArray.length * 0.5);
+            const highRangeEnd = Math.floor(dataArray.length * 0.8);
+            const relativeIdx = (idx - splitPoint) / (totalLines - splitPoint);
+            const binIdx = highRangeStart + Math.floor(relativeIdx * (highRangeEnd - highRangeStart));
+            
+            const rawVal = dataArray[binIdx] || 0;
+            val = Math.min(255, rawVal * 2.5); // 고음 부스팅
+        }
+        
         const weight = parseFloat(line.getAttribute("data-weight")) || 0.5;
         const effectiveVal = val * weight;
         
