@@ -842,16 +842,19 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
     }
 
     .command-bar {
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
         gap: 10px;
         padding: 10px !important;
     }
 
     .exec-btn, #musicSelect {
         width: 100%;
-        padding: 12px 20px !important;
-        font-size: 1rem !important;
+        padding: 10px 15px !important;
+        font-size: 0.9rem !important;
         justify-content: center;
+        margin: 0;
+        height: auto;
     }
 
     .tab-btn {
