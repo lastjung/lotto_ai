@@ -658,9 +658,9 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
 .conn-line {
   stroke: rgba(255, 255, 255, 0.15);
   stroke-width: 1.5;
-  transition:
-    stroke 0.5s ease,
-    stroke-width 0.3s ease;
+  stroke: rgba(255, 255, 255, 0.15);
+  stroke-width: 1.5;
+  /* Removed transition for instant audio response */
 }
 
 .conn-line.active {

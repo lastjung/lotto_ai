@@ -60,31 +60,53 @@ class NeuralNetworkViz {
       this.nodesData.push(layerNodes);
     });
 
-    // 2. Draw Connections
+    // 2. Draw Connections (Sparsity & Renormalization applied)
     for (let i = 0; i < this.nodesData.length - 1; i++) {
       const currentLayer = this.nodesData[i];
       const nextLayer = this.nodesData[i + 1];
 
       currentLayer.forEach((startNode) => {
-        const rawWeights = nextLayer.map(() => Math.random() + 0.1);
-        const totalWeight = rawWeights.reduce((sum, w) => sum + w, 0);
+        let rawWeights = nextLayer.map(() => Math.random());
+        
+        // Sparsity Logic: If next layer is large enough, prune weak connections
+        if (nextLayer.length > 2) {
+            // Find threshold for bottom 30%
+            const sortedWeights = [...rawWeights].sort((a,b) => a - b);
+            const cutoffIndex = Math.floor(rawWeights.length * 0.3); 
+            const threshold = sortedWeights[cutoffIndex];
+            
+            // Set weak weights to 0
+            rawWeights = rawWeights.map(w => w <= threshold ? 0 : w);
+        }
+
+        // Re-normalize active weights to sum to 1.0 (or close)
+        const activeSum = rawWeights.reduce((sum, w) => sum + w, 0);
+        
+        // Safety: if all pruned (unlikely given logic) or sum 0, restore uniform
+        const validWeights = activeSum > 0 
+            ? rawWeights.map(w => w / activeSum) 
+            : nextLayer.map(() => 1 / nextLayer.length);
 
         nextLayer.forEach((endNode, idx) => {
-          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-          line.setAttribute("x1", startNode.x);
-          line.setAttribute("y1", startNode.y);
-          line.setAttribute("x2", endNode.x);
-          line.setAttribute("y2", endNode.y);
-          line.setAttribute("class", "conn-line");
-          line.setAttribute("id", `line-${startNode.id}-${endNode.id}`);
+          const weight = validWeights[idx];
           
-          const normalizedWeight = rawWeights[idx] / totalWeight;
-          line.setAttribute("data-weight", normalizedWeight.toFixed(4));
-          
-          const randomFreqSeed = Math.random();
-          line.setAttribute("data-freq-seed", randomFreqSeed.toFixed(4));
-          
-          this.svg.appendChild(line);
+          // Only draw line if weight is significant (> 0.01)
+          if (weight > 0.01) {
+              const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+              line.setAttribute("x1", startNode.x);
+              line.setAttribute("y1", startNode.y);
+              line.setAttribute("x2", endNode.x);
+              line.setAttribute("y2", endNode.y);
+              line.setAttribute("class", "conn-line");
+              line.setAttribute("id", `line-${startNode.id}-${endNode.id}`);
+              
+              line.setAttribute("data-weight", weight.toFixed(4));
+              
+              const randomFreqSeed = Math.random();
+              line.setAttribute("data-freq-seed", randomFreqSeed.toFixed(4));
+              
+              this.svg.appendChild(line);
+          }
         });
       });
     }
@@ -231,10 +253,212 @@ class NeuralNetworkViz {
     });
   }
 
+
+
+  // Dynamic Rewiring Logic
+  rewireWeights() {
+      const lines = this.svg.querySelectorAll(".conn-line");
+      lines.forEach(line => {
+          let currentWeight = parseFloat(line.getAttribute("data-weight")) || 0.5;
+          // Nudge weight by ±0.15
+          let change = (Math.random() - 0.5) * 0.3; 
+          let newWeight = Math.max(0.1, Math.min(0.8, currentWeight + change)); // Clamp 0.1 ~ 0.8
+          line.setAttribute("data-weight", newWeight.toFixed(4));
+      });
+  }
+
   updateFromAudioData(audioData) {
     if (!this.svg || !audioData) return;
 
+    if (typeof this.avgEnergy === 'undefined') {
+        this.avgEnergy = 0;
+        this.lastRewireTime = 0;
+    }
+
     const { data, sampleRate, fftSize } = audioData;
+    const now = Date.now();
+    
+    // 1. Calculate Current Energy (Simple Average of 'val')
+    let totalEnergy = 0;
+    for(let i=0; i<data.length; i++) totalEnergy += data[i];
+    const currentEnergy = totalEnergy / data.length;
+
+    // 2. Detect Drop (Break) & Trigger Rewire
+    if (currentEnergy < this.avgEnergy * 0.6 && (now - this.lastRewireTime > 1500) && this.avgEnergy > 20) {
+        this.rewireWeights();
+        this.lastRewireTime = now;
+    }
+
+    // Update Moving Average
+    this.avgEnergy = this.avgEnergy * 0.95 + currentEnergy * 0.05;
+
+    // 3. Update History Buffer for Propagation Delay
+    if (!this.audioHistory) this.audioHistory = [];
+    this.audioHistory.unshift([...data]); 
+    if (this.audioHistory.length > 60) this.audioHistory.pop();
+
+    // Strategy Pattern: Choose which visualization method to use
+    // Using True Propagation Logic as requested
+    this.updateVisualsByPropagation(data, sampleRate, fftSize);
+  }
+
+  // New Method: True Neural Propagation (Domino Effect)
+  updateVisualsByPropagation(data, sampleRate, fftSize) {
+    // 1. Initialize State
+    if (!this.nodeValues) this.nodeValues = {}; // Store current activation (0.0 ~ 1.0+)
+
+    const binSize = sampleRate / fftSize;
+    // Layer 1 (Input) Nodes
+    const l1Nodes = this.nodesData[0] || [];
+    
+    // 2. Map Audio to Layer 1 (Input)
+    // Split useful frequency range (50Hz ~ 8000Hz) into chunks for each L1 node
+    const startBin = Math.floor(50 / binSize);
+    const endBin = Math.floor(8000 / binSize);
+    const totalBins = endBin - startBin;
+    const chunk = Math.floor(totalBins / l1Nodes.length);
+
+    l1Nodes.forEach((node, idx) => {
+        const myStart = startBin + (idx * chunk);
+        const myEnd = myStart + chunk;
+        let sum = 0;
+        for(let i=myStart; i<myEnd; i++) sum += data[i] || 0;
+        let avg = sum / (chunk || 1);
+        
+        // Target value for this node
+        const targetVal = avg * 2.5; // Artificial gain
+
+        // Smoothly transition current value to target (Lerp) -> creates delay/organic feel
+        // Alpha 0.2 means it takes a few frames to reach target
+        const current = this.nodeValues[node.id] || 0;
+        this.nodeValues[node.id] = current + (targetVal - current) * 0.2;
+    });
+
+    // 3. Propagate to Hidden Layers (Feed Forward)
+    // We already have structures in this.nodesData
+    for(let l=0; l<this.nodesData.length-1; l++) {
+        const currentLayer = this.nodesData[l];
+        // For each node in next layer, calculate input sum
+        // But simpler: iterate connections.
+        
+        // Reset next layer targets first? No, standard accumulation.
+        // Actually, we need to explicitly calculate targets for Next Layer based on Current Layer
+        const nextLayer = this.nodesData[l+1];
+        nextLayer.forEach(n => { n._tempSum = 0; }); // Temp storage
+        
+        // Process connections
+        const lines = this.svg.querySelectorAll(".conn-line");
+        // Optimization: In a real app, we'd iterate structure, but here we query DOM or assume structure.
+        // Let's iterate DOM lines for this layer to save lookups
+        // Actually, better to use the specific line IDs or just iterate all lines?
+        // Let's iterate currentLayer nodes and calculating their output to next nodes.
+    }
+    
+    // Optimized Propagation Loop using DOM data-weight
+    // We iterate ALL lines. If line starts at L(i), it adds to L(i+1).
+    // Prerequisite: L(i) values must be updated before L(i+1).
+    // Since we process L1 above, now we need to process L2, then L3...
+    
+    // We need a loop over structure layers
+    for(let l=0; l<this.nodesData.length - 1; l++) {
+        const nextLayer = this.nodesData[l+1];
+        const nextLayerIds = nextLayer.map(n => n.id);
+        
+        // Reset inputs for next layer nodes
+        const inputs = {};
+        nextLayerIds.forEach(id => inputs[id] = 0);
+
+        // Calculate flow from current layer
+        const currentLayerNodes = this.nodesData[l];
+        currentLayerNodes.forEach(srcNode => {
+            const srcVal = this.nodeValues[srcNode.id] || 0;
+            if (srcVal > 1) { // Threshold for activation propagation
+                // Find all lines starting from this node
+                // Selector is expensive, but let's trust selector caching or restructure later if slow.
+                // Faster: We know end nodes. Construct ID.
+                nextLayer.forEach(dstNode => {
+                     const lineId = `line-${srcNode.id}-${dstNode.id}`;
+                     const line = document.getElementById(lineId);
+                     if (line) {
+                         const weight = parseFloat(line.getAttribute("data-weight")) || 0;
+                         // Contribution = SourceValue * Weight
+                         const contribution = srcVal * weight;
+                         inputs[dstNode.id] += contribution;
+                         
+                         // VISUALIZATION: Update Line here
+                         // Line brightness depends on Source Activation & Weight
+                         const lineActive = contribution > 5; // Threshold
+                         if (lineActive) {
+                             line.style.opacity = Math.min(1, (contribution / 50) + 0.1);
+                             line.style.strokeWidth = Math.min(4, 0.5 + (contribution / 30));
+                             const hue = 200 + (l * 40); // Color by layer
+                             const light = 50 + (contribution / 50) * 40;
+                             line.style.stroke = `hsl(${hue}, 100%, ${light}%)`;
+                         } else {
+                             line.style.opacity = 0.02;
+                             line.style.strokeWidth = 0.1;
+                             line.style.stroke = "rgba(255,255,255,0.01)";
+                         }
+                     }
+                });
+            } else {
+                // Source inactive -> All outgoing lines inactive
+                nextLayer.forEach(dstNode => {
+                     const lineId = `line-${srcNode.id}-${dstNode.id}`;
+                     const line = document.getElementById(lineId);
+                     if (line) {
+                         line.style.opacity = 0.02;
+                         line.style.strokeWidth = 0.1;
+                     }
+                });
+            }
+        });
+
+        // Update Next Layer Node Values (Lerp towards inputs)
+        nextLayer.forEach(node => {
+            const target = inputs[node.id] || 0;
+            const current = this.nodeValues[node.id] || 0;
+            // Lerp
+            this.nodeValues[node.id] = current + (target - current) * 0.2; 
+        });
+    }
+
+    // 4. Update Node DOM (Heartbeat Pulse Effect)
+    const nodes = this.svg.querySelectorAll(".node");
+    nodes.forEach(node => {
+        const id = node.getAttribute("id").replace("node-", "");
+        const val = this.nodeValues[id] || 0;
+        
+        const baseRadius = 18;
+        if (val > 2) { // Active threshold
+            // Pulse: Instead of linear growth, use a bounce curve or tighter limit
+            // Max size 1.25x (subtle bounce)
+            const scale = 1.0 + Math.min(0.25, val / 150); 
+            node.setAttribute("r", baseRadius * scale);
+            
+            // Color: Blue/Purple base -> shifts to Cyan/White on high energy
+            const hue = 210 - Math.min(40, val / 2); // 210(Blue) -> 170(Cyan)
+            const light = 50 + Math.min(40, val / 3); // Gets brighter
+            
+            node.style.fill = `hsl(${hue}, 100%, ${light}%)`;
+            node.style.fillOpacity = 0.9;
+            node.style.stroke = "#fff";
+            node.style.strokeWidth = 2 + Math.min(3, val / 20); // Border pulses too
+            node.style.filter = `drop-shadow(0 0 ${Math.min(15, val/5)}px hsl(${hue}, 100%, 60%))`;
+        } else {
+            // Resting state
+            node.setAttribute("r", baseRadius);
+            node.style.fill = "rgba(22, 33, 62, 0.5)";
+            node.style.fillOpacity = 0.3;
+            node.style.stroke = "rgba(0, 242, 254, 0.2)";
+            node.style.strokeWidth = 1;
+            node.style.filter = "none";
+        }
+    });
+  }
+
+  // Deprecated: Update Visuals Randomly
+  updateVisualsRandomly_OLD(data, sampleRate, fftSize) {
     const lines = this.svg.querySelectorAll(".conn-line");
     const totalLines = lines.length;
     const lineActivations = {}; 
@@ -244,16 +468,31 @@ class NeuralNetworkViz {
     const usefulRange = endBin - startBin;
     
     lines.forEach((line, idx) => {
-        const seed = parseFloat(line.getAttribute("data-freq-seed")) || 0;
-        const binIdx = startBin + Math.floor(seed * usefulRange);
-        const val = data[binIdx] || 0;
-        const weight = parseFloat(line.getAttribute("data-weight")) || 0.5;
-        const effectiveVal = val * weight; 
-        const hue = 200 + ((idx / totalLines) * 160); 
-        
         const lineId = line.getAttribute("id");
         // line id format: line-startNodeId-endNodeId (e.g., line-11-21)
-        const targetNodeId = lineId.split("-")[2]; 
+        const parts = lineId.split("-");
+        const startNodeId = parts[1];
+        const targetNodeId = parts[2];
+        
+        // Determine Layer Index for Delay
+        // Node ID format "L N" (e.g. 11 is Layer 1, Node 1. 21 is Layer 2, Node 1)
+        // We use startNode's layer to determine delay.
+        // Layer 1 starts at index 0. Layer 2 starts at index 1...
+        const layerIdx = parseInt(startNodeId.charAt(0)) - 1; 
+        
+        // Calculate Delay: 2 frames per layer (tighter sync)
+        const delay = Math.min(this.audioHistory.length - 1, layerIdx * 2);
+        const delayedData = this.audioHistory[delay] || data; // Fallback to current if history empty
+
+        const seed = parseFloat(line.getAttribute("data-freq-seed")) || 0;
+        const binIdx = startBin + Math.floor(seed * usefulRange);
+        const val = delayedData[binIdx] || 0; // Use delayed data
+
+        let weight = parseFloat(line.getAttribute("data-weight")) || 0.5;
+        weight = Math.min(weight, 0.5); 
+
+        const effectiveVal = val * weight; 
+        const hue = 200 + ((idx / totalLines) * 160); 
         
         if (!lineActivations[targetNodeId]) {
             lineActivations[targetNodeId] = { sum: 0, maxHue: 0, count: 0 };
@@ -263,39 +502,47 @@ class NeuralNetworkViz {
             line.style.opacity = Math.min(1, (effectiveVal / 100) + 0.2);
             const lightness = 50 + (effectiveVal / 100) * 25;
             line.style.stroke = `hsl(${hue}, 100%, ${lightness}%)`; 
-            line.style.strokeWidth = 1.0 + (effectiveVal / 100) * 4;
+            // Cap thickness to max 4px
+            line.style.strokeWidth = Math.min(4, 1.0 + (effectiveVal / 100) * 3);
 
             lineActivations[targetNodeId].sum += effectiveVal;
             lineActivations[targetNodeId].maxHue = Math.max(lineActivations[targetNodeId].maxHue, hue);
             lineActivations[targetNodeId].count++;
         } else {
-            line.style.opacity = 0.1;
-            line.style.strokeWidth = 0.5;
-            line.style.stroke = "rgba(255,255,255,0.05)";
+            // Inactive state
+            line.style.opacity = 0.05;
+            line.style.strokeWidth = 0.2;
+            line.style.stroke = "rgba(255,255,255,0.02)";
         }
     });
 
+    // Update Nodes based on incoming lines
     const nodes = this.svg.querySelectorAll(".node");
     nodes.forEach((node) => {
         const nodeId = node.getAttribute("id").replace("node-", ""); 
         const incoming = lineActivations[nodeId];
         const baseRadius = 18;
-        if (incoming && incoming.sum > 0) {
-            const sizeFactor = 0.5 + (incoming.sum / 255) * 0.5;
-            node.setAttribute("r", baseRadius * sizeFactor);
-            const avgActivation = incoming.sum / incoming.count;
-            const nodeLightness = 50 + (avgActivation / 255) * 20;
-            const nodeHue = incoming.maxHue; 
-            node.style.fill = `hsl(${nodeHue}, 100%, ${nodeLightness}%)`;
-            node.style.fillOpacity = "0.6";
-            node.style.filter = `drop-shadow(0 0 8px hsl(${nodeHue}, 100%, 60%))`;
+        if (incoming && incoming.count > 0) {
+             const sizeFactor = Math.min(1.6, 1.0 + (incoming.sum / 600)); 
+             node.setAttribute("r", baseRadius * sizeFactor);
+             const avgActivation = incoming.sum / incoming.count;
+             
+             // Visual Flair for Active Nodes
+             const nodeLightness = 50 + (avgActivation / 255) * 20;
+             const nodeHue = incoming.maxHue; 
+             node.style.fill = `hsl(${nodeHue}, 100%, ${nodeLightness}%)`;
+             node.style.fillOpacity = "0.7"; // Slightly more opaque
+             node.style.filter = `drop-shadow(0 0 10px hsl(${nodeHue}, 100%, 60%))`;
+             node.style.stroke = "#fff";
+             node.style.strokeWidth = "2px";
         } else {
             node.setAttribute("r", baseRadius);
             node.style.fill = "rgba(22, 33, 62, 0.5)";
             node.style.fillOpacity = "0.3";
             node.style.filter = "none";
+            node.style.stroke = "rgba(0, 242, 254, 0.3)";
+            node.style.strokeWidth = "1px";
         }
     });
   }
 }
-
