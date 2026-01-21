@@ -67,10 +67,10 @@ function initNN() {
           
           const selectedValue = musicSelect.value;
           if (selectedValue === "default") {
-              // 기본 음악 재생
-              startMusicVisualizer("music.mp3");
+              startMusicVisualizer("music/music.mp3");
+          } else if (selectedValue === "inaban") {
+              startMusicVisualizer("music/Speedy Gonzalo - Inaban.mp3");
           } else if (selectedValue === "custom") {
-              // 파일 선택 창 열기
               musicInput.click();
           }
       });
