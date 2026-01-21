@@ -386,13 +386,15 @@ class NeuralNetworkViz {
                          inputs[dstNode.id] += contribution;
                          
                          // VISUALIZATION: Update Line here
-                         // Line brightness depends on Source Activation & Weight
                          const lineActive = contribution > 5; // Threshold
                          if (lineActive) {
                              line.style.opacity = Math.min(1, (contribution / 50) + 0.1);
                              line.style.strokeWidth = Math.min(4, 0.5 + (contribution / 30));
-                             const hue = 200 + (l * 40); // Color by layer
-                             const light = 50 + (contribution / 50) * 40;
+                             
+                             // Match Node Color Logic: 180 + (layer * 40)
+                             const hue = (180 + (l * 40)) % 360; 
+                             const light = 50 + Math.min(30, contribution / 40); // Max 80% light
+                             
                              line.style.stroke = `hsl(${hue}, 100%, ${light}%)`;
                          } else {
                              line.style.opacity = 0.02;
@@ -430,21 +432,31 @@ class NeuralNetworkViz {
         const val = this.nodeValues[id] || 0;
         
         const baseRadius = 18;
+        // Parse Layer Index from ID (e.g. "11" -> Layer 1)
+        const layerIdx = parseInt(id.charAt(0)) - 1; 
+        
         if (val > 2) { // Active threshold
-            // Pulse: Instead of linear growth, use a bounce curve or tighter limit
-            // Max size 1.25x (subtle bounce)
+            // Pulse logic
             const scale = 1.0 + Math.min(0.25, val / 150); 
             node.setAttribute("r", baseRadius * scale);
             
-            // Color: Blue/Purple base -> shifts to Cyan/White on high energy
-            const hue = 210 - Math.min(40, val / 2); // 210(Blue) -> 170(Cyan)
-            const light = 50 + Math.min(40, val / 3); // Gets brighter
+            // Color Logic: Layer-based Prism
+            // L1: 180(Cyan), L2: 210(Blue), L3: 240(indigo), L4: 280(Purple), L5: 320(Pink), L6: 30(Orange)
+            const baseHue = 180 + (layerIdx * 40); 
+            const hue = baseHue % 360; 
+            
+            // Prevent white-out: Keep Saturation High, Cap Lightness at 75%
+            const light = 50 + Math.min(25, val / 4); 
             
             node.style.fill = `hsl(${hue}, 100%, ${light}%)`;
             node.style.fillOpacity = 0.9;
-            node.style.stroke = "#fff";
-            node.style.strokeWidth = 2 + Math.min(3, val / 20); // Border pulses too
-            node.style.filter = `drop-shadow(0 0 ${Math.min(15, val/5)}px hsl(${hue}, 100%, 60%))`;
+            
+            // Stroke Optimization: Thin and colored (not pure white)
+            node.style.stroke = `hsl(${hue}, 100%, 75%)`; 
+            node.style.strokeWidth = 1 + Math.min(1.5, val / 50); // Max 2.5px
+            
+            // Halo Glow Effect
+            node.style.filter = `drop-shadow(0 0 ${Math.min(20, val/4)}px hsl(${hue}, 100%, 50%))`;
         } else {
             // Resting state
             node.setAttribute("r", baseRadius);
