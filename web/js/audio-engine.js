@@ -11,6 +11,7 @@ class NeuralAudioEngine {
         this.source = null;
         this.dataArray = null;
         this.isPlaying = false;
+        this.startTime = 0;
     }
 
     initContext() {
@@ -71,12 +72,17 @@ class NeuralAudioEngine {
 
         this.source.connect(this.analyser);
         this.analyser.connect(this.ctx.destination);
+        
+        // Use Date.now() for reliable UI timer
+        this.realStartTime = Date.now();
+        
         this.source.start(0);
         this.isPlaying = true;
     }
 
     stop() {
         this.isPlaying = false;
+        this.realStartTime = 0; // Reset timer source
         if (this.source) {
             try { this.source.stop(); } catch(e) {}
             try { this.source.disconnect(); } catch(e) {}
@@ -87,10 +93,16 @@ class NeuralAudioEngine {
     getFrequencyData() {
         if (!this.analyser || !this.isPlaying) return null;
         this.analyser.getByteFrequencyData(this.dataArray);
+        
+        // Calculate elapsed time using Date.now()
+        // This decouples UI timer from AudioContext internal clock quirks
+        const elapsedSeconds = this.realStartTime ? (Date.now() - this.realStartTime) / 1000 : 0;
+        
         return {
             data: this.dataArray,
-            sampleRate: this.ctx.sampleRate,
-            fftSize: this.analyser.fftSize
+            sampleRate: this.ctx ? this.ctx.sampleRate : 44100,
+            fftSize: this.analyser.fftSize,
+            currentTime: elapsedSeconds
         };
     }
 

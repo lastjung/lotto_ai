@@ -10,6 +10,9 @@ class NeuralNetworkViz {
     this.svg = svgElement;
     this.nodesData = [];
     this.autoFlowInterval = null;
+    
+    // Visualization Mode: 'propagation' (Neural) or 'random'
+    this.vizMode = 'propagation';
 
     this.premiumColors = [
       "#FF6B6B", "#4FACFE", "#00F2FE", "#A29BFE", "#6C5CE7",
@@ -24,6 +27,19 @@ class NeuralNetworkViz {
       "#55efc4", // Layer 5
       "#81ecec", // Layer 6
     ];
+  }
+
+  setVizMode(mode) {
+    if (mode === 'propagation' || mode === 'random') {
+      this.vizMode = mode;
+      // Reset state when switching modes
+      this.nodeValues = {};
+      this.resetVisuals();
+    }
+  }
+
+  getVizMode() {
+    return this.vizMode;
   }
 
   render(structureStr) {
@@ -43,6 +59,7 @@ class NeuralNetworkViz {
     const height = width < 768 ? 350 : 500;
     
     this.svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+
 
     const layerSpacing = width / (layers.length + 1);
 
@@ -139,6 +156,9 @@ class NeuralNetworkViz {
         this.svg.appendChild(g);
       });
     });
+    
+    // Create Timer Element inside SVG (Must be last to be on top)
+    this.createTimer(width);
   }
 
   randomizeConnectionColors() {
@@ -251,6 +271,9 @@ class NeuralNetworkViz {
         l.style.strokeWidth = "0.5";
         l.style.stroke = "rgba(255,255,255,0.05)";
     });
+    
+    // Reset Timer
+    this.updateTimer("00:00");
   }
 
 
@@ -267,6 +290,26 @@ class NeuralNetworkViz {
       });
   }
 
+  createTimer(width) {
+      this.timerText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      this.timerText.setAttribute("x", width - 30);
+      this.timerText.setAttribute("y", 40);
+      this.timerText.setAttribute("text-anchor", "end");
+      this.timerText.setAttribute("fill", "#00f2fe");
+      this.timerText.setAttribute("font-family", "'Courier New', monospace");
+      this.timerText.setAttribute("font-size", "24px");
+      this.timerText.setAttribute("font-weight", "bold");
+      this.timerText.style.textShadow = "0 0 10px rgba(0, 242, 254, 0.8)";
+      this.timerText.textContent = "00:00";
+      this.svg.appendChild(this.timerText);
+  }
+
+  updateTimer(timeStr) {
+      if (this.timerText) {
+          this.timerText.textContent = timeStr;
+      }
+  }
+
   updateFromAudioData(audioData) {
     if (!this.svg || !audioData) return;
 
@@ -275,8 +318,16 @@ class NeuralNetworkViz {
         this.lastRewireTime = 0;
     }
 
-    const { data, sampleRate, fftSize } = audioData;
+    const { data, sampleRate, fftSize, currentTime } = audioData;
     const now = Date.now();
+    
+    // Update Timer inside SVG
+    if (typeof currentTime === 'number') {
+        const mins = Math.floor(currentTime / 60);
+        const secs = Math.floor(currentTime % 60);
+        const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        this.updateTimer(timeStr);
+    }
     
     // 1. Calculate Current Energy (Simple Average of 'val')
     let totalEnergy = 0;
@@ -297,15 +348,33 @@ class NeuralNetworkViz {
     this.audioHistory.unshift([...data]); 
     if (this.audioHistory.length > 60) this.audioHistory.pop();
 
-    // Strategy Pattern: Choose which visualization method to use
-    // Using True Propagation Logic as requested
-    this.updateVisualsByPropagation(data, sampleRate, fftSize);
+    // Strategy Pattern: Choose visualization method based on mode
+    if (this.vizMode === 'propagation') {
+      this.updateVisualsByPropagation(data, sampleRate, fftSize);
+    } else {
+      this.updateVisualsRandomly_OLD(data, sampleRate, fftSize);
+    }
   }
 
   // New Method: True Neural Propagation (Domino Effect)
   updateVisualsByPropagation(data, sampleRate, fftSize) {
+    // 0. Reset ALL lines to inactive state at the start of each frame
+    const allLines = this.svg.querySelectorAll(".conn-line");
+    allLines.forEach(line => {
+        line.style.opacity = 0.02;
+        line.style.strokeWidth = 0.1;
+        line.style.stroke = "rgba(255,255,255,0.02)";
+    });
+
     // 1. Initialize State
     if (!this.nodeValues) this.nodeValues = {}; // Store current activation (0.0 ~ 1.0+)
+    if (!this.nodeAmplitudes) this.nodeAmplitudes = {}; // Store raw FFT amplitude (0~255)
+
+    // 1.5. Apply Decay to ALL node values (makes activations fade faster when audio drops)
+    Object.keys(this.nodeValues).forEach(key => {
+        this.nodeValues[key] *= 0.85; // Decay by 15% each frame
+        if (this.nodeValues[key] < 0.1) this.nodeValues[key] = 0; // Floor to 0
+    });
 
     const binSize = sampleRate / fftSize;
     // Layer 1 (Input) Nodes
@@ -325,13 +394,19 @@ class NeuralNetworkViz {
         for(let i=myStart; i<myEnd; i++) sum += data[i] || 0;
         let avg = sum / (chunk || 1);
         
-        // Target value for this node
-        const targetVal = avg * 2.5; // Artificial gain
-
-        // Smoothly transition current value to target (Lerp) -> creates delay/organic feel
-        // Alpha 0.2 means it takes a few frames to reach target
+        // Store raw amplitude for line visualization (0~255)
+        // Energy Preservation: No gain, no lerp for the physical energy storage
+        this.nodeAmplitudes[node.id] = avg;
+        
+        // Visual Pulse: Keep gain and lerp for UI/Node responsiveness
+        const targetVal = avg * 2.5; // Artificial gain for visuals
         const current = this.nodeValues[node.id] || 0;
-        this.nodeValues[node.id] = current + (targetVal - current) * 0.2;
+        
+        if (targetVal > current) {
+            this.nodeValues[node.id] = current + (targetVal - current) * 0.7;
+        } else {
+            this.nodeValues[node.id] = current + (targetVal - current) * 0.1;
+        }
     });
 
     // 3. Propagate to Hidden Layers (Feed Forward)
@@ -371,8 +446,9 @@ class NeuralNetworkViz {
         // Calculate flow from current layer
         const currentLayerNodes = this.nodesData[l];
         currentLayerNodes.forEach(srcNode => {
-            const srcVal = this.nodeValues[srcNode.id] || 0;
-            if (srcVal > 1) { // Threshold for activation propagation
+            // ENERGY PROPAGATION SOURCE: Use nodeAmplitudes (pure energy) instead of nodeValues (smoothed)
+            const srcVal = this.nodeAmplitudes[srcNode.id] || 0;
+            if (srcVal > 0.1) { // Practical low threshold for propagation
                 // Find all lines starting from this node
                 // Selector is expensive, but let's trust selector caching or restructure later if slow.
                 // Faster: We know end nodes. Construct ID.
@@ -385,15 +461,20 @@ class NeuralNetworkViz {
                          const contribution = srcVal * weight;
                          inputs[dstNode.id] += contribution;
                          
-                         // VISUALIZATION: Update Line here
-                         const lineActive = contribution > 5; // Threshold
+                         // VISUALIZATION: Use the actual energy flowing through this specific line
+                         // lineEnergy = Source Amplitude * Weight
+                         const lineEnergy = contribution; 
+                         const lineActive = lineEnergy > 0.5; // Lower threshold to see thin connections
+                         
                          if (lineActive) {
-                             line.style.opacity = Math.min(1, (contribution / 50) + 0.1);
-                             line.style.strokeWidth = Math.min(4, 0.5 + (contribution / 30));
+                             // Visualization based on lineEnergy. 
+                             // Since lineEnergy is smaller than total amp, we adjust the scaling.
+                             line.style.opacity = Math.min(1, (lineEnergy / 50) + 0.1);
+                             line.style.strokeWidth = Math.min(5, 0.5 + (lineEnergy / 15));
                              
                              // Match Node Color Logic: 180 + (layer * 40)
                              const hue = (180 + (l * 40)) % 360; 
-                             const light = 50 + Math.min(30, contribution / 40); // Max 80% light
+                             const light = 50 + Math.min(30, (lineEnergy / 20) * 30); // Max 80% light
                              
                              line.style.stroke = `hsl(${hue}, 100%, ${light}%)`;
                          } else {
@@ -420,8 +501,11 @@ class NeuralNetworkViz {
         nextLayer.forEach(node => {
             const target = inputs[node.id] || 0;
             const current = this.nodeValues[node.id] || 0;
-            // Lerp
-            this.nodeValues[node.id] = current + (target - current) * 0.2; 
+            // Visual Lerp (keep smoothing for the pulse effect)
+            this.nodeValues[node.id] = current + (target * 2.5 - current) * 0.2; 
+            
+            // ENERGY PRESERVATION STORAGE: Store the pure summed input energy
+            this.nodeAmplitudes[node.id] = target;
         });
     }
 

@@ -9,6 +9,7 @@ let nnSvg;
 let nnStructureInput;
 let nnRandomBtn;
 let nnAutoBtn;
+let vizModeBtn = null;
 let musicBtn = null;
 let musicInput = null;
 
@@ -43,6 +44,12 @@ function initNN() {
     }
     if (nnAutoBtn) {
         nnAutoBtn.addEventListener("click", toggleAutoFlow);
+    }
+
+    // 4. Viz Mode Toggle Button
+    vizModeBtn = document.getElementById("nnVizModeBtn");
+    if (vizModeBtn) {
+        vizModeBtn.addEventListener("click", toggleVizMode);
     }
 
     if (musicBtn && musicSelect) {
@@ -96,6 +103,26 @@ function renderNetwork() {
 
 function randomizeConnectionColors() {
     if (nnViz) nnViz.randomizeConnectionColors();
+    if (typeof playSound === "function") playSound("click");
+}
+
+function toggleVizMode() {
+    if (!nnViz || !vizModeBtn) return;
+
+    const currentMode = nnViz.getVizMode();
+    
+    if (currentMode === 'propagation') {
+        // Switch to Random
+        nnViz.setVizMode('random');
+        vizModeBtn.textContent = "🎲 Random";
+        vizModeBtn.style.background = "linear-gradient(135deg, #fdcb6e 0%, #e17055 100%)";
+    } else {
+        // Switch to Neural (Propagation)
+        nnViz.setVizMode('propagation');
+        vizModeBtn.textContent = "🧠 Neural";
+        vizModeBtn.style.background = "linear-gradient(135deg, #00b894 0%, #55efc4 100%)";
+    }
+    
     if (typeof playSound === "function") playSound("click");
 }
 
@@ -183,7 +210,7 @@ function stopMusicVisualizer() {
     
     updateMusicButtonState(false);
     
-    // Visually reset
+    
     if (nnViz) {
         nnViz.resetVisuals();
     }
@@ -204,17 +231,19 @@ function updateMusicButtonState(isPlaying) {
 // Main Animation Loop
 // =========================================
 
-function animateViz() {
-    if (!isMusicSyncing) return;
-    animationId = requestAnimationFrame(animateViz);
 
-    // 1. Get Audio Data
-    const audioData = nnAudio.getFrequencyData();
-    if (!audioData) return;
+function animateViz() {
+    animationId = requestAnimationFrame(animateViz);
     
-    // 2. Delegate Visualization to Engine
-    if (nnViz) {
-        nnViz.updateFromAudioData(audioData);
+    // Always check timer updates if audio is playing (or trying to)
+    if (nnAudio && nnAudio.isPlaying) {
+         // Get timer data even if not syncing visuals fully
+         const audioData = nnAudio.getFrequencyData();
+         
+         if (!isMusicSyncing) return; // Only stop visualization updates
+         
+         // 2. Delegate Visualization to Engine
+         if (nnViz) nnViz.updateFromAudioData(audioData);
     }
 }
 
