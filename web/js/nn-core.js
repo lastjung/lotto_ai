@@ -85,21 +85,19 @@ class NeuralNetworkViz {
       currentLayer.forEach((startNode) => {
         let rawWeights = nextLayer.map(() => Math.random());
         
-        // Sparsity Logic: If next layer is large enough, prune weak connections
+        // Sparsity Logic: Removed to ensure 100% Energy Conservation (Fully Connected)
+        /*
         if (nextLayer.length > 2) {
-            // Find threshold for bottom 30%
             const sortedWeights = [...rawWeights].sort((a,b) => a - b);
             const cutoffIndex = Math.floor(rawWeights.length * 0.3); 
             const threshold = sortedWeights[cutoffIndex];
-            
-            // Set weak weights to 0
             rawWeights = rawWeights.map(w => w <= threshold ? 0 : w);
         }
+        */
 
         // Re-normalize active weights to sum to 1.0 (or close)
         const activeSum = rawWeights.reduce((sum, w) => sum + w, 0);
         
-        // Safety: if all pruned (unlikely given logic) or sum 0, restore uniform
         const validWeights = activeSum > 0 
             ? rawWeights.map(w => w / activeSum) 
             : nextLayer.map(() => 1 / nextLayer.length);
@@ -163,6 +161,22 @@ class NeuralNetworkViz {
     
     // Create Timer (Bottom Left)
     this.createTimer(width, height);
+    
+    // Optimization: Pre-calculate Density Factors for visualization
+    // Avoids re-calculating (src * dst / base) every frame
+    this.layerDensityFactors = [];
+    if (this.nodesData.length >= 2) {
+        const l1Count = this.nodesData[0].length;
+        const l2Count = this.nodesData[1].length;
+        const baseLineCount = Math.max(1, l1Count * l2Count);
+        
+        for(let i=0; i<this.nodesData.length-1; i++) {
+             const src = this.nodesData[i].length;
+             const dst = this.nodesData[i+1].length;
+             const lineCount = src * dst;
+             this.layerDensityFactors[i] = lineCount / baseLineCount;
+        }
+    }
   }
 
   randomizeConnectionColors() {
@@ -335,8 +349,9 @@ class NeuralNetworkViz {
     for(let i=0; i<data.length; i++) totalEnergy += data[i];
     const currentEnergy = totalEnergy / data.length;
 
-    // 2. Detect Drop (Break) & Trigger Rewire
-    if (currentEnergy < this.avgEnergy * 0.6 && (now - this.lastRewireTime > 1500) && this.avgEnergy > 20) {
+    // 2. Detect Drop (Break) & Trigger Rewire (Random Mode Only)
+    // Neural Propagation mode requires stable weights for logic.
+    if (this.vizMode === 'random' && currentEnergy < this.avgEnergy * 0.6 && (now - this.lastRewireTime > 1500) && this.avgEnergy > 20) {
         this.rewireWeights();
         this.lastRewireTime = now;
     }
@@ -359,6 +374,9 @@ class NeuralNetworkViz {
 
   // New Method: True Neural Propagation (Domino Effect)
   updateVisualsByPropagation(data, sampleRate, fftSize) {
+    // Debug: Check Energy Conservation
+    let L1_sum = 0;
+
     // 0. Reset ALL lines to inactive state at the start of each frame
     const allLines = this.svg.querySelectorAll(".conn-line");
     allLines.forEach(line => {
@@ -398,6 +416,7 @@ class NeuralNetworkViz {
         // Store raw amplitude for line visualization (0~255)
         // Energy Preservation: No gain, no lerp for the physical energy storage
         this.nodeAmplitudes[node.id] = avg;
+        L1_sum += avg;
         
         // Visual Pulse: Keep gain and lerp for UI/Node responsiveness
         const targetVal = avg * 2.5; // Artificial gain for visuals
@@ -469,8 +488,11 @@ class NeuralNetworkViz {
                          
                          if (lineActive) {
                              // Visualization based on lineEnergy. 
-                             // High Gain Formula: Max out quickly (at 100 energy) -> Bold Lines
-                             const ratio = Math.min(1, lineEnergy / 100);
+                             // Optimization: Use pre-calculated density factor (Line Count Ratio)
+                             const densityFactor = this.layerDensityFactors[l] || 1;
+                             
+                             // Formula: (Energy * DensityFactor) / 100
+                             const ratio = Math.min(1, (lineEnergy * densityFactor) / 100);
                              
                              line.style.opacity = ratio + 0.1; 
                              line.style.strokeWidth = ratio * 8;
@@ -508,6 +530,7 @@ class NeuralNetworkViz {
         });
 
         // Update Next Layer Node Values (Lerp towards inputs)
+        let currentLayerSum = 0;
         nextLayer.forEach(node => {
             const target = inputs[node.id] || 0;
             const current = this.nodeValues[node.id] || 0;
@@ -516,7 +539,17 @@ class NeuralNetworkViz {
             
             // ENERGY PRESERVATION STORAGE: Store the pure summed input energy
             this.nodeAmplitudes[node.id] = target;
+            currentLayerSum += target;
         });
+
+        // Normalize Energy: Removed forced scaling as per user request.
+        // With stable weights (sum=1.0), energy preserves naturally.
+        /*
+        if (L1_sum > 1 && currentLayerSum > 0) {
+             const scaleFactor = L1_sum / currentLayerSum;
+             // ...
+        }
+        */
     }
 
     // 4. Update Node DOM (Heartbeat Pulse Effect)
