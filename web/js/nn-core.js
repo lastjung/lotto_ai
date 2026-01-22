@@ -113,9 +113,13 @@ class NeuralNetworkViz {
               line.setAttribute("x1", startNode.x);
               line.setAttribute("y1", startNode.y);
               line.setAttribute("x2", endNode.x);
-              line.setAttribute("y2", endNode.y);
+              line.setAttribute("y2", endNode.y); // Fix: Ensure y2 is set correctly
               line.setAttribute("class", "conn-line");
               line.setAttribute("id", `line-${startNode.id}-${endNode.id}`);
+              
+              // Flow Effect Setup (Re-applied)
+              line.setAttribute("stroke-dasharray", "10 5"); // Dash 10px, Gap 5px
+              line.setAttribute("stroke-linecap", "round");
               
               line.setAttribute("data-weight", weight.toFixed(4));
               
@@ -471,6 +475,12 @@ class NeuralNetworkViz {
                              line.style.opacity = ratio + 0.1; 
                              line.style.strokeWidth = ratio * 8;
                              
+                             // Flow Animation (Re-applied)
+                             // Higher energy = Faster flow
+                             const speed = 1 + (ratio * 5); 
+                             const offset = (Date.now() / 1000 * 20 * speed) % 15; 
+                             line.style.strokeDashoffset = -offset;
+                             
                              // Match Node Color Logic: 180 + (layer * 40)
                              const hue = (180 + (l * 40)) % 360; 
                              const light = 50 + Math.min(30, (lineEnergy / 20) * 30); // Max 80% light
@@ -478,8 +488,9 @@ class NeuralNetworkViz {
                              line.style.stroke = `hsl(${hue}, 100%, ${light}%)`;
                          } else {
                              line.style.opacity = 0.02;
-                             line.style.strokeWidth = 0.1;
+                             line.style.strokeWidth = 0.5; // Minimal width
                              line.style.stroke = "rgba(255,255,255,0.01)";
+                             line.style.strokeDashoffset = 0; // Stop flow
                          }
                      }
                 });
