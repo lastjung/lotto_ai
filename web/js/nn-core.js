@@ -170,18 +170,27 @@ class NeuralNetworkViz {
     
     // Optimization: Pre-calculate Density Factors for visualization
     // Avoids re-calculating (src * dst / base) every frame
-    this.layerDensityFactors = [];
+    this.layerDensityFactors = [];  // For lines (connections)
+    this.nodeDensityFactors = [];   // For nodes (circles) - includes ALL layers
+    
     if (this.nodesData.length >= 2) {
         const l1Count = this.nodesData[0].length;
         const l2Count = this.nodesData[1].length;
         const baseLineCount = Math.max(1, l1Count * l2Count);
         
+        // Line density factors (layers 0 to N-2)
         for(let i=0; i<this.nodesData.length-1; i++) {
              const src = this.nodesData[i].length;
              const dst = this.nodesData[i+1].length;
              const lineCount = src * dst;
-             // Fix: Apply Math.max(0.7, ...) to prevent energy drop in convergent layers
              this.layerDensityFactors[i] = Math.max(0.7, lineCount / baseLineCount);
+        }
+        
+        // Node density factors (ALL layers, 0 to N-1)
+        // Factor = currentLayerCount / L1Count
+        // This compensates for energy being split among fewer/more nodes
+        for(let i=0; i<this.nodesData.length; i++) {
+             this.nodeDensityFactors[i] = this.nodesData[i].length / l1Count;
         }
     }
   }
@@ -413,11 +422,12 @@ class NeuralNetworkViz {
     if (!this.nodeValues) this.nodeValues = {}; // Store current activation (0.0 ~ 1.0+)
     if (!this.nodeAmplitudes) this.nodeAmplitudes = {}; // Store raw FFT amplitude (0~255)
 
+    // [DISABLED] nodeValues no longer used for node sizing (using nodeAmplitudes instead)
     // 1.5. Apply Decay to ALL node values (makes activations fade faster when audio drops)
-    Object.keys(this.nodeValues).forEach(key => {
-        this.nodeValues[key] *= 0.85; // Decay by 15% each frame
-        if (this.nodeValues[key] < 0.1) this.nodeValues[key] = 0; // Floor to 0
-    });
+    // Object.keys(this.nodeValues).forEach(key => {
+    //     this.nodeValues[key] *= 0.85; // Decay by 15% each frame
+    //     if (this.nodeValues[key] < 0.1) this.nodeValues[key] = 0; // Floor to 0
+    // });
 
     const binSize = sampleRate / fftSize;
     // Layer 1 (Input) Nodes
@@ -444,23 +454,27 @@ class NeuralNetworkViz {
         
         // Visual Pulse: Keep gain and lerp for UI/Node responsiveness
         const targetVal = avg * 2.5; // Artificial gain for visuals
-        const current = this.nodeValues[node.id] || 0;
-        
-        if (targetVal > current) {
-            this.nodeValues[node.id] = current + (targetVal - current) * 0.7;
-        } else {
-            this.nodeValues[node.id] = current + (targetVal - current) * 0.1;
-        }
+        // [DISABLED] nodeValues Lerp - no longer used for node sizing
+        // const current = this.nodeValues[node.id] || 0;
+        // if (targetVal > current) {
+        //     this.nodeValues[node.id] = current + (targetVal - current) * 0.7;
+        // } else {
+        //     this.nodeValues[node.id] = current + (targetVal - current) * 0.1;
+        // }
     });
 
     // 2.5. Neuroplasticity Check (Rewire Phase)
-    // Restore logic: Trigger on Silence (Energy < 40) OR Stagnation (> 8s)
-    const avgEnergy = l1Nodes.length > 0 ? L1_sum / l1Nodes.length : 0;
+    // Trigger: Energy drops below 50% of moving average
+    // Cooldown: 1 second (1000ms)
+    const currentEnergy = l1Nodes.length > 0 ? L1_sum / l1Nodes.length : 0;
     const timeDiff = Date.now() - this.lastRewireTime;
     
-    // Cooldown is 2000ms. If loud for > 8s, force update.
-    if ((avgEnergy < 40 && timeDiff > 2000) || timeDiff > 8000) {
-        // console.log(`🧠 Rewired. Energy: ${avgEnergy.toFixed(1)}, TimeDiff: ${timeDiff}`);
+    // Update moving average (smooth tracking)
+    if (!this.mAVG) this.mAVG = currentEnergy;
+    this.mAVG = this.mAVG * 0.95 + currentEnergy * 0.05;
+    
+    // Rewire if current energy drops to 50% of average (with 1s cooldown)
+    if (this.mAVG > 10 && currentEnergy / this.mAVG < 0.5 && timeDiff > 1000) {
         this.rewireWeights();
         this.lastRewireTime = Date.now();
     }
@@ -583,9 +597,9 @@ class NeuralNetworkViz {
         let currentLayerSum = 0;
         nextLayer.forEach(node => {
             const target = inputs[node.id] || 0;
-            const current = this.nodeValues[node.id] || 0;
-            // Visual Lerp (keep smoothing for the pulse effect)
-            this.nodeValues[node.id] = current + (target * 2.5 - current) * 0.2; 
+            // [DISABLED] nodeValues Lerp - no longer used for node sizing
+            // const current = this.nodeValues[node.id] || 0;
+            // this.nodeValues[node.id] = current + (target * 2.5 - current) * 0.2; 
             
             // ENERGY PRESERVATION STORAGE: Store the pure summed input energy
             this.nodeAmplitudes[node.id] = target;
@@ -606,16 +620,20 @@ class NeuralNetworkViz {
     const nodes = this.svg.querySelectorAll(".node");
     nodes.forEach(node => {
         const id = node.getAttribute("id").replace("node-", "");
-        const val = this.nodeValues[id] || 0;
+        const energy = Math.max(0, this.nodeAmplitudes[id] || 0); // Direct energy connection (preserved)
         
-        const baseRadius = 18;
         // Parse Layer Index from ID (e.g. "11" -> Layer 1)
         const layerIdx = parseInt(id.charAt(0)) - 1; 
         
-        if (val > 2) { // Active threshold
-            // Pulse logic
-            const scale = 1.0 + Math.min(0.25, val / 150); 
-            node.setAttribute("r", baseRadius * scale);
+        // Apply density compensation for visual balance (energy storage NOT affected)
+        const nodeFactor = this.nodeDensityFactors[layerIdx] || 1;
+        const compensatedEnergy = energy * nodeFactor;
+        const radius = (Math.sqrt(compensatedEnergy) * 2.0) + 5;  // radius = sqrt(compensatedEnergy) * scale + base
+        
+        const baseRadius = 18;
+        
+        if (energy > 0.1) { // Active threshold (use original energy for condition)
+            node.setAttribute("r", radius);
             
             // Color Logic: Layer-based Prism
             // L1: 180(Cyan), L2: 210(Blue), L3: 240(indigo), L4: 280(Purple), L5: 320(Pink), L6: 30(Orange)
@@ -623,17 +641,17 @@ class NeuralNetworkViz {
             const hue = baseHue % 360; 
             
             // Prevent white-out: Keep Saturation High, Cap Lightness at 75%
-            const light = 50 + Math.min(25, val / 4); 
+            const light = 50 + Math.min(25, energy / 4); 
             
             node.style.fill = `hsl(${hue}, 100%, ${light}%)`;
             node.style.fillOpacity = 0.9;
             
             // Stroke Optimization: Thin and colored (not pure white)
             node.style.stroke = `hsl(${hue}, 100%, 75%)`; 
-            node.style.strokeWidth = 1 + Math.min(1.5, val / 50); // Max 2.5px
+            node.style.strokeWidth = 1 + Math.min(1.5, energy / 50); // Max 2.5px
             
             // Halo Glow Effect
-            node.style.filter = `drop-shadow(0 0 ${Math.min(20, val/4)}px hsl(${hue}, 100%, 50%))`;
+            node.style.filter = `drop-shadow(0 0 ${Math.min(20, energy/4)}px hsl(${hue}, 100%, 50%))`;
         } else {
             // Resting state
             node.setAttribute("r", baseRadius);
