@@ -10,6 +10,7 @@ class NeuralNetworkViz {
     this.svg = svgElement;
     this.nodesData = [];
     this.autoFlowInterval = null;
+    this.lastRewireTime = 0; // Neuroplasticity Timer
     
     // Visualization Mode: 'propagation' (Neural) or 'random'
     this.vizMode = 'propagation';
@@ -101,6 +102,10 @@ class NeuralNetworkViz {
         const validWeights = activeSum > 0 
             ? rawWeights.map(w => w / activeSum) 
             : nextLayer.map(() => 1 / nextLayer.length);
+            
+        // [검증] 가중치 합계 확인 (반드시 1.0 이어야 함)
+        const checkSum = validWeights.reduce((acc, val) => acc + val, 0);
+        console.log(`Node ${startNode.id} Outgoing Weights Sum: ${checkSum.toFixed(6)}`);
 
         nextLayer.forEach((endNode, idx) => {
           const weight = validWeights[idx];
@@ -120,6 +125,7 @@ class NeuralNetworkViz {
               line.setAttribute("stroke-linecap", "round");
               
               line.setAttribute("data-weight", weight.toFixed(4));
+              line.setAttribute("data-target-weight", weight.toFixed(4)); // Init target match
               
               const randomFreqSeed = Math.random();
               line.setAttribute("data-freq-seed", randomFreqSeed.toFixed(4));
@@ -174,7 +180,8 @@ class NeuralNetworkViz {
              const src = this.nodesData[i].length;
              const dst = this.nodesData[i+1].length;
              const lineCount = src * dst;
-             this.layerDensityFactors[i] = lineCount / baseLineCount;
+             // Fix: Apply Math.max(0.7, ...) to prevent energy drop in convergent layers
+             this.layerDensityFactors[i] = Math.max(0.7, lineCount / baseLineCount);
         }
     }
   }
@@ -292,15 +299,32 @@ class NeuralNetworkViz {
     this.updateTimer("00:00");
   }
 
+  // Re-distribute weights randomly while maintaining Sum = 1.0 (Energy Conservation)
   rewireWeights() {
-      const lines = this.svg.querySelectorAll(".conn-line");
-      lines.forEach(line => {
-          let currentWeight = parseFloat(line.getAttribute("data-weight")) || 0.5;
-          // Nudge weight by ±0.15
-          let change = (Math.random() - 0.5) * 0.3; 
-          let newWeight = Math.max(0.1, Math.min(0.8, currentWeight + change)); // Clamp 0.1 ~ 0.8
-          line.setAttribute("data-weight", newWeight.toFixed(4));
-      });
+      if (!this.nodesData || this.nodesData.length === 0) return;
+
+      for (let i = 0; i < this.nodesData.length - 1; i++) {
+        const currentLayer = this.nodesData[i];
+        const nextLayer = this.nodesData[i+1];
+        
+        currentLayer.forEach(srcNode => {
+           // Generate random weights
+           let rawWeights = nextLayer.map(() => Math.random());
+           const total = rawWeights.reduce((a,b) => a+b, 0);
+           
+           // Normalize and apply
+           nextLayer.forEach((dstNode, idx) => {
+               const weight = total > 0 ? (rawWeights[idx] / total) : (1/nextLayer.length);
+               const lineId = `line-${srcNode.id}-${dstNode.id}`;
+               const line = document.getElementById(lineId);
+               if (line) {
+                   // Smooth Morphing: Set Target instead of direct apply
+                   line.setAttribute("data-target-weight", weight.toFixed(4));
+               }
+           });
+        });
+      }
+      // console.log("🧠 Neuroplasticity: Weights rewired during rest.");
   }
 
 
@@ -429,6 +453,18 @@ class NeuralNetworkViz {
         }
     });
 
+    // 2.5. Neuroplasticity Check (Rewire Phase)
+    // Restore logic: Trigger on Silence (Energy < 40) OR Stagnation (> 8s)
+    const avgEnergy = l1Nodes.length > 0 ? L1_sum / l1Nodes.length : 0;
+    const timeDiff = Date.now() - this.lastRewireTime;
+    
+    // Cooldown is 2000ms. If loud for > 8s, force update.
+    if ((avgEnergy < 40 && timeDiff > 2000) || timeDiff > 8000) {
+        // console.log(`🧠 Rewired. Energy: ${avgEnergy.toFixed(1)}, TimeDiff: ${timeDiff}`);
+        this.rewireWeights();
+        this.lastRewireTime = Date.now();
+    }
+
     // 3. Propagate to Hidden Layers (Feed Forward)
     // We already have structures in this.nodesData
     for(let l=0; l<this.nodesData.length-1; l++) {
@@ -476,7 +512,15 @@ class NeuralNetworkViz {
                      const lineId = `line-${srcNode.id}-${dstNode.id}`;
                      const line = document.getElementById(lineId);
                      if (line) {
-                         const weight = parseFloat(line.getAttribute("data-weight")) || 0;
+                         let weight = parseFloat(line.getAttribute("data-weight")) || 0;
+                         const targetWeight = parseFloat(line.getAttribute("data-target-weight")) || weight;
+                         
+                         // MORPHING: Softly interpolate towards target (Factor 0.05)
+                         if (Math.abs(targetWeight - weight) > 0.001) {
+                             weight = weight + (targetWeight - weight) * 0.05;
+                             line.setAttribute("data-weight", weight.toFixed(4));
+                         }
+
                          // Contribution = SourceValue * Weight
                          const contribution = srcVal * weight;
                          inputs[dstNode.id] += contribution;
@@ -491,8 +535,12 @@ class NeuralNetworkViz {
                              // Optimization: Use pre-calculated density factor (Line Count Ratio)
                              const densityFactor = this.layerDensityFactors[l] || 1;
                              
-                             // Formula: (Energy * DensityFactor) / 100
-                             const ratio = Math.min(1, (lineEnergy * densityFactor) / 100);
+                             // CONSISTENT LOGIC: Apply density factor to BOTH structure and color
+                             // This ensures thin lines in dense layers are visually boosted in both width and brightness
+                             const compensatedEnergy = lineEnergy * densityFactor;
+                             
+                             // Formula: Compensated Energy / 100
+                             const ratio = Math.min(1, compensatedEnergy / 100);
                              
                              line.style.opacity = ratio + 0.1; 
                              line.style.strokeWidth = ratio * 8;
@@ -505,7 +553,9 @@ class NeuralNetworkViz {
                              
                              // Match Node Color Logic: 180 + (layer * 40)
                              const hue = (180 + (l * 40)) % 360; 
-                             const light = 50 + Math.min(30, (lineEnergy / 20) * 30); // Max 80% light
+                             // Fix: Use COMPENSATED energy for lightness too. 
+                             // Previously raw energy was low in dense layers, making them dark.
+                             const light = 50 + Math.min(30, (compensatedEnergy / 20) * 30); // Max 80% light
                              
                              line.style.stroke = `hsl(${hue}, 100%, ${light}%)`;
                          } else {
