@@ -157,8 +157,8 @@ class NeuralNetworkViz {
       });
     });
     
-    // Create Timer Element inside SVG (Must be last to be on top)
-    this.createTimer(width);
+    // Create Timer (Bottom Left)
+    this.createTimer(width, height);
   }
 
   randomizeConnectionColors() {
@@ -271,14 +271,9 @@ class NeuralNetworkViz {
         l.style.strokeWidth = "0.5";
         l.style.stroke = "rgba(255,255,255,0.05)";
     });
-    
-    // Reset Timer
     this.updateTimer("00:00");
   }
 
-
-
-  // Dynamic Rewiring Logic
   rewireWeights() {
       const lines = this.svg.querySelectorAll(".conn-line");
       lines.forEach(line => {
@@ -290,16 +285,18 @@ class NeuralNetworkViz {
       });
   }
 
-  createTimer(width) {
+
+  createTimer(width, height) {
       this.timerText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      this.timerText.setAttribute("x", width - 30);
-      this.timerText.setAttribute("y", 40);
-      this.timerText.setAttribute("text-anchor", "end");
+      // Bottom Left Position
+      this.timerText.setAttribute("x", 40);
+      this.timerText.setAttribute("y", height - 30); 
+      this.timerText.setAttribute("text-anchor", "start"); // Left align
       this.timerText.setAttribute("fill", "#00f2fe");
+      this.timerText.setAttribute("fill-opacity", "0.8"); // Subtle
       this.timerText.setAttribute("font-family", "'Courier New', monospace");
-      this.timerText.setAttribute("font-size", "24px");
+      this.timerText.setAttribute("font-size", "20px");
       this.timerText.setAttribute("font-weight", "bold");
-      this.timerText.style.textShadow = "0 0 10px rgba(0, 242, 254, 0.8)";
       this.timerText.textContent = "00:00";
       this.svg.appendChild(this.timerText);
   }
@@ -321,7 +318,7 @@ class NeuralNetworkViz {
     const { data, sampleRate, fftSize, currentTime } = audioData;
     const now = Date.now();
     
-    // Update Timer inside SVG
+    // Update Timer
     if (typeof currentTime === 'number') {
         const mins = Math.floor(currentTime / 60);
         const secs = Math.floor(currentTime % 60);
@@ -468,9 +465,11 @@ class NeuralNetworkViz {
                          
                          if (lineActive) {
                              // Visualization based on lineEnergy. 
-                             // Since lineEnergy is smaller than total amp, we adjust the scaling.
-                             line.style.opacity = Math.min(1, (lineEnergy / 50) + 0.1);
-                             line.style.strokeWidth = Math.min(5, 0.5 + (lineEnergy / 15));
+                             // High Gain Formula: Max out quickly (at 100 energy) -> Bold Lines
+                             const ratio = Math.min(1, lineEnergy / 100);
+                             
+                             line.style.opacity = ratio + 0.1; 
+                             line.style.strokeWidth = ratio * 8;
                              
                              // Match Node Color Logic: 180 + (layer * 40)
                              const hue = (180 + (l * 40)) % 360; 
