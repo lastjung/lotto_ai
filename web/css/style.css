@@ -17,7 +17,7 @@
 
 body {
   min-height: 100vh;
-  background: radial-gradient(circle at 50% 0%, #111827 0%, #030712 100%);
+  background: #030712;
   font-family: 'Exo 2', sans-serif;
   display: flex;
   flex-direction: column;
@@ -25,6 +25,60 @@ body {
   padding: 20px;
   color: white;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Nebula Background Blobs */
+.nebula-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.nebula {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.15;
+  mix-blend-mode: screen;
+}
+
+.nebula-1 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, #4f46e5 0%, transparent 70%);
+  top: -100px;
+  right: -100px;
+  animation: float 20s infinite alternate ease-in-out;
+}
+
+.nebula-2 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, #7c3aed 0%, transparent 70%);
+  bottom: -50px;
+  left: -50px;
+  animation: float 25s infinite alternate-reverse ease-in-out;
+}
+
+.nebula-3 {
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, #0ea5e9 0%, transparent 70%);
+  top: 40%;
+  left: 20%;
+  animation: float 30s infinite alternate ease-in-out;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(100px, 50px) scale(1.1); }
 }
 
 h1 {
@@ -971,10 +1025,10 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
     font-family: 'Orbitron', sans-serif;
     width: 160px;
     height: 48px;
-    background: linear-gradient(135deg, var(--nn-primary) 0%, var(--nn-secondary) 100%) !important;
+    background: linear-gradient(135deg, var(--nn-primary) 10%, var(--nn-secondary) 90%) !important;
     font-size: 0.8rem !important;
     font-weight: 700 !important;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
     color: #030712 !important;
     border: none !important;
     border-radius: 14px !important;
@@ -982,6 +1036,20 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    box-shadow: 0 0 20px rgba(0, 242, 254, 0.2);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.play-btn:not(:disabled):not(.active) {
+    animation: buttonPulse 3s infinite;
+}
+
+@keyframes buttonPulse {
+    0% { box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
+    50% { box-shadow: 0 0 30px rgba(0, 242, 254, 0.5); }
+    100% { box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
 }
 
 .play-btn:hover {
@@ -994,21 +1062,24 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
     font-family: 'Orbitron', sans-serif;
     width: 100px;
     height: 48px;
-    background: rgba(239, 68, 68, 0.1) !important;
+    background: rgba(239, 68, 68, 0.08) !important;
     color: #ef4444 !important;
-    border: 1px solid rgba(239, 68, 68, 0.2) !important;
+    border: 1px solid rgba(239, 68, 68, 0.15) !important;
+    backdrop-filter: blur(8px);
     font-size: 0.75rem !important;
     font-weight: 700 !important;
     letter-spacing: 1px;
     border-radius: 14px !important;
     visibility: hidden;
     opacity: 0;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .stop-btn:hover {
     background: #ef4444 !important;
     color: white !important;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    transform: translateY(-2px);
 }
 
 .stop-btn.visible {
@@ -1178,7 +1249,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     font-family: 'Orbitron', sans-serif;
     width: 100%;
     padding: 16px;
-    background: var(--nn-primary);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: #030712;
     border: none;
     border-radius: 14px;
@@ -1188,11 +1259,13 @@ input[type="range"]::-webkit-slider-thumb:hover {
     cursor: pointer;
     margin-top: 10px;
     transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
 
 .apply-btn:hover {
     filter: brightness(1.1);
-    box-shadow: 0 8px 20px rgba(0, 242, 254, 0.3);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+    transform: translateY(-2px);
 }
 
 @keyframes spin {

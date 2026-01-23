@@ -16,17 +16,17 @@ class NeuralNetworkViz {
     this.vizMode = 'propagation';
 
     this.premiumColors = [
-      "#FF6B6B", "#4FACFE", "#00F2FE", "#A29BFE", "#6C5CE7",
-      "#FDCB6E", "#E17055", "#00B894", "#55E6C1", "#FD79A8",
+      "#00f2fe", "#4facfe", "#8b5cf6", "#f472b6", "#38bdf8",
+      "#a78bfa", "#22d3ee", "#818cf8", "#c084fc", "#fb7185",
     ];
 
     this.layerColors = [
-      "#00f2fe", // Layer 1
-      "#a29bfe", // Layer 2
-      "#fdcb6e", // Layer 3
-      "#ff7675", // Layer 4
-      "#55efc4", // Layer 5
-      "#81ecec", // Layer 6
+      "#22d3ee", // Cyan
+      "#818cf8", // Indigo
+      "#c084fc", // Purple
+      "#f472b6", // Pink
+      "#38bdf8", // Sky
+      "#4ade80", // Emerald (High Energy Layer)
     ];
   }
 
@@ -653,8 +653,9 @@ class NeuralNetworkViz {
             node.style.stroke = `hsl(${hue}, 100%, 75%)`; 
             node.style.strokeWidth = 1 + Math.min(1.5, energy / 50); // Max 2.5px
             
-            // Halo Glow Effect
-            node.style.filter = `drop-shadow(0 0 ${Math.min(20, energy/4)}px hsl(${hue}, 100%, 50%))`;
+            // Halo Glow Effect: Exponential glow scale for "Nebula" feel
+            const glowSize = Math.min(30, (energy / 40) ** 1.5);
+            node.style.filter = `drop-shadow(0 0 ${glowSize}px hsl(${hue}, 100%, 65%))`;
         } else {
             // Resting state
             node.setAttribute("r", baseRadius);
