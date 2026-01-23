@@ -105,13 +105,41 @@ function initNN() {
 
     stopBtn = document.getElementById("nnStopBtn");
 
+    // Sync Logic for Duplicated Mode Controls (Header vs Settings)
+    const syncModeControls = () => {
+        const headerRadios = document.getElementsByName('musicTrackMain');
+        const settingsRadios = document.getElementsByName('musicTrack');
+
+        // Header -> Settings
+        headerRadios.forEach((radio, idx) => {
+            radio.addEventListener('change', () => {
+                if (radio.checked && settingsRadios[idx]) {
+                    settingsRadios[idx].checked = true;
+                    // Trigger logic update if needed immediately (Optional: or wait for Play)
+                }
+            });
+        });
+
+        // Settings -> Header
+        settingsRadios.forEach((radio, idx) => {
+            radio.addEventListener('change', () => {
+                if (radio.checked && headerRadios[idx]) {
+                    headerRadios[idx].checked = true;
+                }
+            });
+        });
+    };
+    syncModeControls();
+
+
     if (musicBtn) {
         let isLoading = false;
 
         musicBtn.addEventListener("click", async () => {
             if (isLoading) return;
 
-            // Check current selected mode from Radio Buttons
+            // Check current selected mode from Radio Buttons (Use Settings group as source of truth)
+            // Since they are synced, checking one group is enough.
             const isNeural = document.getElementById("nnTrack1")?.checked;
             const isRandom = document.getElementById("nnTrack2")?.checked;
             const isColor = document.getElementById("nnTrack3")?.checked;

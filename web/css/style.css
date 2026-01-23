@@ -17,7 +17,7 @@
 
 body {
   min-height: 100vh;
-  background: #030712;
+  background: radial-gradient(circle at 50% 0%, #111827 0%, #030712 100%);
   font-family: 'Exo 2', sans-serif;
   display: flex;
   flex-direction: column;
@@ -26,59 +26,6 @@ body {
   color: white;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
-  position: relative;
-}
-
-/* Nebula Background Blobs */
-.nebula-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.nebula {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(120px);
-  opacity: 0.15;
-  mix-blend-mode: screen;
-}
-
-.nebula-1 {
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, #4f46e5 0%, transparent 70%);
-  top: -100px;
-  right: -100px;
-  animation: float 20s infinite alternate ease-in-out;
-}
-
-.nebula-2 {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, #7c3aed 0%, transparent 70%);
-  bottom: -50px;
-  left: -50px;
-  animation: float 25s infinite alternate-reverse ease-in-out;
-}
-
-.nebula-3 {
-  width: 450px;
-  height: 450px;
-  background: radial-gradient(circle, #0ea5e9 0%, transparent 70%);
-  top: 40%;
-  left: 20%;
-  animation: float 30s infinite alternate ease-in-out;
-}
-
-@keyframes float {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(100px, 50px) scale(1.1); }
 }
 
 h1 {
@@ -882,8 +829,14 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
 
     .nn-header {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center; /* Center align on mobile */
         gap: 15px;
+    }
+
+    .main-header-controls {
+        width: 100%;
+        justify-content: center;
+        transform: scale(0.9); /* Slightly smaller on mobile */
     }
 
     .nn-title {
@@ -1095,6 +1048,21 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
     padding: 4px;
     gap: 4px;
     border: 1px solid var(--nn-glass-border);
+}
+
+.main-header-controls {
+    margin-left: auto; /* Push to right on desktop */
+    transform-origin: right center;
+    transform: scale(0.85); /* Compact fit for header */
+}
+
+/* On very narrow screens, header controls might stack */
+@media (max-width: 768px) {
+    .main-header-controls {
+        margin-left: 0;
+        transform-origin: center top;
+        transform: scale(1);
+    }
 }
 
 .mode-toggle-group label {
