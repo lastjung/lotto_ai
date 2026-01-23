@@ -1043,21 +1043,52 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
 /* Mode Toggle Group (Segmented UI) */
 .mode-toggle-group {
     display: flex;
-    align-items: center; /* Vertical alignment fix */
+    align-items: center;
     background: rgba(0, 0, 0, 0.4);
     border-radius: 14px;
-    padding: 4px;
-    gap: 12px; /* Increased gap for better spacing */
+    padding: 6px 12px;
+    gap: 16px;
     border: 1px solid var(--nn-glass-border);
 }
 
-.mode-toggle-group input[type="radio"] {
+.mode-option-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+.mode-option-wrapper input[type="radio"] {
     margin: 0;
-    vertical-align: middle;
-    cursor: pointer;
-    accent-color: var(--nn-primary); /* Modern browser support */
+    appearance: none;
+    -webkit-appearance: none;
     width: 16px;
     height: 16px;
+    border: 2px solid #4b5563;
+    border-radius: 50%;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.2s ease;
+    display: grid;
+    place-content: center;
+}
+
+.mode-option-wrapper input[type="radio"]::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: 0.2s transform ease-in-out;
+    background-color: var(--nn-primary);
+}
+
+.mode-option-wrapper input[type="radio"]:checked {
+    border-color: var(--nn-primary);
+}
+
+.mode-option-wrapper input[type="radio"]:checked::before {
+    transform: scale(1);
 }
 
 .main-header-controls {
@@ -1075,24 +1106,32 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
     }
 }
 
-.mode-toggle-group label {
-    flex: 1;
-    padding: 10px 4px;
-    text-align: center;
-    font-size: 0.7rem;
+.mode-option-wrapper label {
+    font-size: 0.75rem;
     font-weight: 600;
     color: #94a3b8;
     cursor: pointer;
-    border-radius: 10px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    white-space: nowrap;
+    transition: color 0.3s ease;
+    user-select: none;
+    line-height: 1; /* Match input height logic */
+    padding-top: 1px; /* Optical centering compensation */
 }
 
-.mode-toggle-group input[type="radio"]:checked + label {
-    background: rgba(255, 255, 255, 0.1);
+/* Sync label color when input checked (using sibling selector) */
+.mode-option-wrapper input[type="radio"]:checked + label {
     color: var(--nn-primary);
-    box-shadow: inset 0 0 0 1px rgba(0, 242, 254, 0.2);
+    text-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
 }
+
+.mode-option-wrapper:hover input[type="radio"] {
+    border-color: #94a3b8;
+}
+
+.mode-option-wrapper:hover label {
+    color: #cbd5e1;
+}
+
+
 
 /* Settings Panel Styles */
 .settings-panel {
