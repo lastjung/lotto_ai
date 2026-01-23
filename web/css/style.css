@@ -1,4 +1,13 @@
-@charset "UTF-8";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --nn-primary: #00f2fe;
+  --nn-secondary: #4facfe;
+  --nn-accent: #8b5cf6;
+  --nn-bg: #030712;
+  --nn-glass: rgba(255, 255, 255, 0.03);
+  --nn-glass-border: rgba(255, 255, 255, 0.08);
+}
 
 * {
   margin: 0;
@@ -8,13 +17,14 @@
 
 body {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: radial-gradient(circle at 50% 0%, #111827 0%, #030712 100%);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 20px;
   color: white;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1 {
@@ -885,74 +895,115 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
 /* Player Bar Styles */
 .player-bar-container {
     padding: 0 20px;
-    margin-top: 20px;
+    margin-top: 25px;
+    width: 100%;
 }
 
 .player-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 15px;
-    padding: 15px 25px;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(10px);
+    gap: 20px;
+    padding: 12px 24px;
+    background: var(--nn-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--nn-glass-border);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .music-select {
     flex: 1;
-    max-width: 200px;
-    background: #2d3436 !important;
-    border: 1px solid #444 !important;
-    font-size: 0.9rem !important;
-    padding: 10px 15px !important;
+    max-width: 220px;
+    background: rgba(0, 0, 0, 0.4) !important;
+    border: 1px solid var(--nn-glass-border) !important;
+    font-size: 0.85rem !important;
+    padding: 11px 16px !important;
+    border-radius: 12px !important;
+    color: #efeff1 !important;
+    transition: all 0.2s ease;
+}
+
+.music-select:hover {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
 }
 
 .main-controls {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, 48px) 160px 100px;
     align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
+    gap: 12px;
 }
 
 .icon-btn {
-    background: #444;
-    border: 1px solid #555;
-    color: white;
-    width: 45px;
-    height: 45px;
-    border-radius: 12px;
+    background: transparent;
+    border: 1px solid var(--nn-glass-border);
+    color: #e5e7eb;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 1.2rem;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icon-btn svg {
+    width: 22px;
+    height: 22px;
+    stroke-width: 2.25;
 }
 
 .icon-btn:hover {
-    background: #555;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--nn-primary);
+    border-color: rgba(0, 242, 254, 0.4);
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 242, 254, 0.2);
 }
 
 .play-btn {
-    min-width: 140px;
-    height: 45px;
-    background: linear-gradient(135deg, #0984e3 0%, #6c5ce7 100%) !important;
-    font-size: 1rem !important;
+    width: 160px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--nn-primary) 0%, var(--nn-secondary) 100%) !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px;
+    color: #030712 !important;
+    border: none !important;
+    border-radius: 14px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.play-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 242, 254, 0.3);
 }
 
 .stop-btn {
     width: 100px;
-    height: 45px;
-    background: #d63031 !important;
+    height: 48px;
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: #ef4444 !important;
+    border: 1px solid rgba(239, 68, 68, 0.2) !important;
     font-size: 0.9rem !important;
-    /* Use visibility instead of display to prevent layout shift */
+    font-weight: 600 !important;
+    border-radius: 14px !important;
     visibility: hidden;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: all 0.3s ease;
+}
+
+.stop-btn:hover {
+    background: #ef4444 !important;
+    color: white !important;
 }
 
 .stop-btn.visible {
@@ -963,70 +1014,32 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
 /* Mode Toggle Group (Segmented UI) */
 .mode-toggle-group {
     display: flex;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 14px;
     padding: 4px;
-    gap: 2px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.mode-toggle-group input[type="radio"] {
-    display: none;
+    gap: 4px;
+    border: 1px solid var(--nn-glass-border);
 }
 
 .mode-toggle-group label {
     flex: 1;
-    padding: 10px 5px;
+    padding: 10px 4px;
     text-align: center;
-    font-size: 0.75rem;
-    font-weight: bold;
-    color: #888;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #94a3b8;
     cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.3s ease;
+    border-radius: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     white-space: nowrap;
-    letter-spacing: 0.5px;
 }
 
 .mode-toggle-group input[type="radio"]:checked + label {
-    background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
-    color: #1a1a2e;
-    box-shadow: 0 4px 10px rgba(0, 242, 254, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--nn-primary);
+    box-shadow: inset 0 0 0 1px rgba(0, 242, 254, 0.2);
 }
 
-/* Settings Body Adjustments */
-.settings-body .setting-item {
-    margin-bottom: 5px;
-}
-
-.settings-body .slider-wrapper {
-    background: rgba(255,255,255,0.05);
-    padding: 15px;
-    border-radius: 12px;
-}
-
-/* Mobile Responsive Overrides */
-@media (max-width: 600px) {
-    .player-bar {
-        flex-direction: column;
-        gap: 15px;
-        padding: 20px;
-    }
-
-    .music-select {
-        max-width: 100%;
-        width: 100%;
-    }
-
-    .main-controls {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .play-btn {
-        flex: 1;
-    }
-}
 /* Settings Panel Styles */
 .settings-panel {
     position: fixed;
@@ -1034,8 +1047,9 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(8px);
+    background: rgba(3, 7, 18, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     display: none;
     justify-content: center;
     align-items: center;
@@ -1043,107 +1057,163 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
 }
 
 .settings-content {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
+    background: #0f172a;
+    border: 1px solid var(--nn-glass-border);
+    border-radius: 28px;
     width: 90%;
-    max-width: 450px;
-    padding: 30px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+    max-width: 440px;
+    padding: 40px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
 }
 
 .settings-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 25px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 15px;
+    margin-bottom: 30px;
 }
 
 .settings-header h3 {
-    font-size: 1.2rem;
-    color: #fff;
-    font-weight: 600;
+    font-size: 1.5rem;
+    color: #f8fafc;
+    font-weight: 700;
+    letter-spacing: -0.5px;
 }
 
 .close-btn {
-    background: transparent;
-    border: none;
-    color: #aaa;
-    font-size: 1.8rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--nn-glass-border);
+    color: #94a3b8;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    line-height: 1;
+    transition: all 0.2s ease;
 }
 
 .close-btn:hover {
-    color: #fff;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.2);
 }
 
-.settings-body {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.setting-item {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+.settings-body .setting-item {
+    margin-bottom: 24px;
 }
 
 .setting-item label {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #00f2fe;
-    letter-spacing: 1px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
 }
 
-.slider-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 15px;
+/* Custom Range Input */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: #1e293b;
+    border-radius: 2px;
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--nn-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid #0f172a;
+    box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+    transition: transform 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
 }
 
 .slider-labels {
     display: flex;
     justify-content: space-between;
-    font-size: 0.7rem;
-    color: #888;
-    margin-top: 5px;
+    font-size: 0.65rem;
+    color: #64748b;
+    font-weight: 500;
+    margin-top: 8px;
 }
 
-.setting-item small {
-    font-size: 0.7rem;
-    color: #666;
-    margin-top: 5px;
-}
-
-.settings-body input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
+.nn-input {
     width: 100%;
-    height: 6px;
-    background: #2a2a3a;
-    border-radius: 3px;
+    background: #1e293b;
+    border: 1px solid var(--nn-glass-border);
+    border-radius: 14px;
+    padding: 14px;
+    color: #f8fafc;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.nn-input:focus {
     outline: none;
+    border-color: var(--nn-primary);
+    background: #0f172a;
 }
 
-.settings-body input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 18px;
-    height: 18px;
-    background: #00f2fe;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
-}
-
-.settings-body .nn-input {
+.apply-btn {
     width: 100%;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid #3a3a5a;
-    border-radius: 10px;
-    padding: 12px;
-    color: #fff;
+    padding: 16px;
+    background: var(--nn-primary);
+    color: #030712;
+    border: none;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.3s ease;
+}
+
+.apply-btn:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 8px 20px rgba(0, 242, 254, 0.3);
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+    .player-bar {
+        flex-direction: column;
+        padding: 24px;
+        gap: 16px;
+    }
+    
+    .music-select {
+        max-width: 100%;
+        width: 100%;
+    }
+    
+    .main-controls {
+        width: 100%;
+        grid-template-columns: repeat(2, 48px) 1fr auto;
+    }
+    
+    .play-btn {
+        width: auto;
+    }
 }

@@ -91,8 +91,13 @@ function initNN() {
             if (nnAudio) {
                 const newMuteState = !nnAudio.isMuted;
                 nnAudio.setMute(newMuteState);
-                soundToggle.textContent = newMuteState ? "🔇" : "🔊";
-                soundToggle.style.opacity = newMuteState ? "0.5" : "1";
+                if (newMuteState) {
+                    soundToggle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>';
+                    soundToggle.style.opacity = "0.4";
+                } else {
+                    soundToggle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+                    soundToggle.style.opacity = "1";
+                }
                 if (typeof playSound === "function") playSound("click");
             }
         });
@@ -337,26 +342,29 @@ function updateMusicButtonState(state) {
 
     switch(state) {
         case 'loading':
-            musicBtn.textContent = "⌛ LOADING...";
-            musicBtn.style.background = "#555";
+            musicBtn.innerHTML = '<svg class="animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="18" height="18"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path></svg><span>LOADING...</span>';
             musicBtn.style.cursor = "not-allowed";
+            musicBtn.style.opacity = "0.7";
             break;
         case 'playing':
-            musicBtn.textContent = "⏸ PAUSE";
-            musicBtn.style.background = "linear-gradient(135deg, #f39c12 0%, #e67e22 100%)";
+            musicBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg><span>PAUSE</span>';
+            musicBtn.style.background = "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)";
             musicBtn.style.cursor = "pointer";
+            musicBtn.style.opacity = "1";
             if (stopBtn) stopBtn.classList.add("visible");
             break;
         case 'paused':
-            musicBtn.textContent = "▶️ RESUME";
-            musicBtn.style.background = "linear-gradient(135deg, #27ae60 0%, #2ecc71 100%)";
+            musicBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M5 3l14 9-14 9V3z"/></svg><span>RESUME</span>';
+            musicBtn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
             musicBtn.style.cursor = "pointer";
+            musicBtn.style.opacity = "1";
             break;
         case 'stopped':
         default:
-            musicBtn.textContent = "▶️ PLAY";
-            musicBtn.style.background = "linear-gradient(135deg, #0984e3 0%, #6c5ce7 100%)";
+            musicBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M5 3l14 9-14 9V3z"/></svg><span>PLAY MUSIC</span>';
+            musicBtn.style.background = "linear-gradient(135deg, var(--nn-primary) 0%, var(--nn-secondary) 100%)";
             musicBtn.style.cursor = "pointer";
+            musicBtn.style.opacity = "1";
             if (stopBtn) stopBtn.classList.remove("visible");
             break;
     }
