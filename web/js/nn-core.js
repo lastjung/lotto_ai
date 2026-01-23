@@ -103,9 +103,9 @@ class NeuralNetworkViz {
             ? rawWeights.map(w => w / activeSum) 
             : nextLayer.map(() => 1 / nextLayer.length);
             
-        // [검증] 가중치 합계 확인 (반드시 1.0 이어야 함)
-        const checkSum = validWeights.reduce((acc, val) => acc + val, 0);
-        console.log(`Node ${startNode.id} Outgoing Weights Sum: ${checkSum.toFixed(6)}`);
+        // [검증] 가중치 합계 확인 (반드시 1.0 이어야 함) - DO NOT DELETE
+        // const checkSum = validWeights.reduce((acc, val) => acc + val, 0);
+        // console.log(`Node ${startNode.id} Outgoing Weights Sum: ${checkSum.toFixed(6)}`);
 
         nextLayer.forEach((endNode, idx) => {
           const weight = validWeights[idx];
@@ -226,6 +226,9 @@ class NeuralNetworkViz {
 
   startAutoFlow(speedVal) {
     if (this.autoFlowInterval) clearInterval(this.autoFlowInterval);
+    
+    // Default to 500 if no speed provided to prevent NaN and high speed
+    if (speedVal === undefined || speedVal === null) speedVal = 500;
     
     const intervalTime = Math.max(20, 1100 - speedVal);
 

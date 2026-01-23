@@ -1,99 +1,64 @@
 # 🧠 Neural Network Music Visualizer
 
-A real-time audio-reactive neural network visualization built with vanilla JavaScript, SVG, and the Web Audio API.
+A real-time audio-reactive neural network visualization built with modern vanilla JavaScript (ES6+ Classes), SVG, and the Web Audio API.
 
 ![Neural Network Visualizer](https://img.shields.io/badge/Neural_Network-Visualizer-blue?style=for-the-badge)
 ![Web Audio API](https://img.shields.io/badge/Web_Audio-API-green?style=for-the-badge)
 ![SVG](https://img.shields.io/badge/SVG-Animation-orange?style=for-the-badge)
 
-## ✨ Features
+## ✨ New Features & Updates
 
-### 🎵 Music Sync Mode
+### 💎 Modular Class-Based Architecture
 
-- **Real-time frequency analysis** using Web Audio API's AnalyserNode
-- **Dynamic line activation** based on audio frequency bands
-- **Node activation simulation** - nodes respond to incoming connection signals
-- **Neural network weight simulation** - each connection has a random weight affecting activation strength
+The project has been refactored into specialized ES6 classes for better performance and maintainability:
 
-### ⚡ Auto Flow Mode
+- **`NeuralNetworkViz`**: Core visualization engine (DOM/SVG management).
+- **`NeuralAudioEngine`**: Robust audio processing and analysis logic.
+- **`Controller Pattern`**: Integrated UI event handling.
 
-- Automated signal propagation animation
-- Adjustable speed control
-- Visual demonstration of neural network forward propagation
+### ⚙️ Premium Settings Panel
 
-### 🎨 Random Color Mode
+- **Integrated Controls**: Specialized modal for volume, flow speed, and network structure.
+- **Master Volume**: Granular volume control with smooth gain transitions.
+- **Segmented Mode Toggle**: High-performance UI for switching between Neural, Random, Color, and Flow modes.
 
-- Instantly randomize all connection colors
-- Premium gradient color palette
+### 🎵 Enhanced Mode Logic
 
-## 🚀 Live Demo
-
-**[View Live Demo](https://lastjung.github.io/lotto_ai/web/)**
-
-## 🛠️ Tech Stack
-
-- **HTML5 / CSS3** - Modern responsive layout
-- **Vanilla JavaScript** - No frameworks required
-- **SVG** - Scalable vector graphics for smooth rendering
-- **Web Audio API** - Real-time audio analysis
-  - `AudioContext` for audio processing
-  - `AnalyserNode` for frequency data extraction
-  - `getByteFrequencyData()` for 128-bin frequency spectrum
+- **Neural Mode**: Authentic signal propagation synchronized with audio frequency bands.
+- **Continuous Tool Modes**: "Random Color" and "Air Flow" now support continuous loop, pause, and resume.
+- **Visual Stablity**: Eliminated layout shifts during STOP/PLAY transitions.
 
 ## 📁 Project Structure
 
 ```
 web/
-├── index.html          # Main UI structure
+├── index.html          # Main UI structure & Settings Modal
 ├── css/
-│   └── style.css       # Styling and animations
+│   └── style.css       # Premium glassmorphism & responsive styles
 ├── js/
-│   ├── main.js         # Tab logic + Lotto generator
-│   └── neural-viz.js   # Neural network visualization logic
-└── music.mp3           # Default background music (royalty-free)
+│   ├── main.js           # Tab logic + Lotto generator
+│   ├── audio-engine.js   # NeuralAudioEngine Class (Web Audio API)
+│   ├── nn-core.js        # NeuralNetworkViz Class (SVG Logic)
+│   └── neural-viz.js     # Main Controller & UI Bindings
+└── music/              # Royalty-free music assets
 ```
 
 ## 🎯 How It Works
 
-### Music Visualization Flow
+### Neural Propagation Flow
 
-```
-🎵 Music Playback
-      ↓
-AudioContext → AnalyserNode
-      ↓
-getByteFrequencyData(dataArray)  // 128 frequency bins
-      ↓
-[Lines Processing]
-├─ Assign frequency band to each line (binIdx)
-├─ Calculate effectiveVal = val × weight
-├─ If effectiveVal > 60: activate (color, width, opacity)
-└─ Track target node for activation propagation
-      ↓
-[Nodes Processing]
-├─ Sum incoming activated lines
-├─ If sum > 0: activate node (color, glow, size)
-└─ Otherwise: reset to default state
-      ↓
-requestAnimationFrame(animateViz)  // Loop
-```
-
-### Frequency-Layer Mapping
-
-| Layer              | Frequency Range | Responds To      |
-| ------------------ | --------------- | ---------------- |
-| Input (10s → 20s)  | Low (Bass)      | Kick drums, bass |
-| Hidden (20s → 30s) | Mid             | Melodies, vocals |
-| Output (30s → 40s) | High (Treble)   | Hi-hats, cymbals |
+- **Energy Conservation**: Weights are renormalized to sum to 1.0 per node, ensuring stable energy flow.
+- **Propagation Delay**: Signals travel through layers with a slight, oddly-satisfying delay.
+- **Node Pulsing**: Dynamic SVG filters and scaling respond to incoming neural weight sums.
 
 ## 🎮 Controls
 
-| Button              | Function                                |
-| ------------------- | --------------------------------------- |
-| 🎨 **RANDOM COLOR** | Randomize all connection colors         |
-| ⚡ **AUTO FLOW**    | Start/stop automated flow animation     |
-| 🎵 **MUSIC SYNC**   | Play music with real-time visualization |
-| 📂 **Select Music** | Choose custom audio file                |
+| Control             | Function                                   |
+| ------------------- | ------------------------------------------ |
+| ▶️ **PLAY / PAUSE** | Universal control for all modes            |
+| ⏹ **STOP**          | Reset visuals and audio context            |
+| 🔊 **SOUND TOGGLE** | Instant mute/unmute from player bar        |
+| ⚙️ **SETTINGS**     | Access modes, volume, speed, and structure |
 
 ## 📦 Installation
 
@@ -104,32 +69,18 @@ requestAnimationFrame(animateViz)  // Loop
    cd lotto_ai
    ```
 
-2. Start a local server (required for audio playback):
+2. Start a local server:
 
    ```bash
    python3 -m http.server 8000
    ```
 
-3. Open in browser:
-   ```
-   http://localhost:8000/web/
-   ```
-
-## 🎵 Music Credits
-
-Background music: **"Q Train" by Adam MacDougall**  
-Source: YouTube Audio Library (Royalty-Free)
+3. Open in browser: `http://localhost:8000/web/`
 
 ## 📄 License
 
 MIT License - feel free to use and modify!
 
-## 🙏 Acknowledgments
-
-- Web Audio API documentation
-- SVG animation techniques
-- Neural network visualization concepts
-
 ---
 
-Made with ❤️ and JavaScript
+Made with ❤️ and Advanced Agentic Coding

@@ -9,18 +9,26 @@ let nnSvg;
 let nnStructureInput;
 let nnRandomBtn;
 let nnAutoBtn;
-let vizModeBtn = null;
 let musicBtn = null;
 let musicInput = null;
+let stopBtn = null;
+let settingsBtn = null;
+let settingsPanel = null;
+let settingsClose = null;
+let applyBtn = null;
+let volumeSlider = null;
+let speedSlider = null;
+let soundToggle = null;
 
 let animationId = null;
 let isMusicSyncing = false;
+let colorInterval = null; // Track continuous color mode
+let clockSeconds = 0; // Manual clock seconds for tool modes
+let standaloneClockInterval = null; // Interval for tool mode clock
 
 function initNN() {
     nnSvg = document.getElementById("nnSvg");
     nnStructureInput = document.getElementById("nnStructure");
-    nnRandomBtn = document.getElementById("nnRandomBtn");
-    nnAutoBtn = document.getElementById("nnAutoBtn");
     musicBtn = document.getElementById("nnMusicBtn");
     musicInput = document.getElementById("musicFile");
     const musicSelect = document.getElementById("musicSelect");
@@ -35,52 +43,166 @@ function initNN() {
     // 2. Initialize Audio Engine
     nnAudio = new NeuralAudioEngine();
 
-    // 3. Bind UI Events
-    if (nnStructureInput) {
-        nnStructureInput.addEventListener("input", renderNetwork);
-    }
-    if (nnRandomBtn) {
-        nnRandomBtn.addEventListener("click", randomizeConnectionColors);
-    }
-    if (nnAutoBtn) {
-        nnAutoBtn.addEventListener("click", toggleAutoFlow);
+    // 3. Settings Panel
+    settingsBtn = document.getElementById("nnSettingsBtn");
+    settingsPanel = document.getElementById("nnSettingsPanel");
+    settingsClose = document.getElementById("nnSettingsClose");
+    applyBtn = document.getElementById("nnApplyBtn");
+    volumeSlider = document.getElementById("nnVolume");
+    speedSlider = document.getElementById("nnSpeed");
+
+    if (settingsBtn) {
+        settingsBtn.addEventListener("click", () => {
+            settingsPanel.style.display = "flex";
+            if (typeof playSound === "function") playSound("click");
+        });
     }
 
-    // 4. Viz Mode Toggle Button
-    vizModeBtn = document.getElementById("nnVizModeBtn");
-    if (vizModeBtn) {
-        vizModeBtn.addEventListener("click", toggleVizMode);
+    if (settingsClose) {
+        settingsClose.addEventListener("click", () => {
+            settingsPanel.style.display = "none";
+        });
     }
 
-    if (musicBtn && musicSelect) {
+    // Close on outside click
+    window.addEventListener("click", (e) => {
+        if (e.target === settingsPanel) {
+            settingsPanel.style.display = "none";
+        }
+    });
+
+    if (volumeSlider) {
+        volumeSlider.addEventListener("input", (e) => {
+            if (nnAudio) nnAudio.setVolume(e.target.value);
+        });
+    }
+
+    if (applyBtn) {
+        applyBtn.addEventListener("click", () => {
+             renderNetwork();
+             settingsPanel.style.display = "none";
+             if (typeof playSound === "function") playSound("click");
+        });
+    }
+
+    soundToggle = document.getElementById("nnSoundToggle");
+    if (soundToggle) {
+        soundToggle.addEventListener("click", () => {
+            if (nnAudio) {
+                const newMuteState = !nnAudio.isMuted;
+                nnAudio.setMute(newMuteState);
+                soundToggle.textContent = newMuteState ? "🔇" : "🔊";
+                soundToggle.style.opacity = newMuteState ? "0.5" : "1";
+                if (typeof playSound === "function") playSound("click");
+            }
+        });
+    }
+
+    stopBtn = document.getElementById("nnStopBtn");
+
+    if (musicBtn) {
+        let isLoading = false;
+
         musicBtn.addEventListener("click", async () => {
-            if (isMusicSyncing) {
-                stopMusicVisualizer();
+            if (isLoading) return;
+
+            // Check current selected mode from Radio Buttons
+            const isNeural = document.getElementById("nnTrack1")?.checked;
+            const isRandom = document.getElementById("nnTrack2")?.checked;
+            const isColor = document.getElementById("nnTrack3")?.checked;
+            const isFlow = document.getElementById("nnTrack4")?.checked;
+            
+            // 1. Tool Actions (Doesn't start music sync core)
+            if (isColor) {
+                if (colorInterval) {
+                   clearInterval(colorInterval);
+                   colorInterval = null;
+                   stopStandaloneClock(); // Stop manual clock
+                   updateMusicButtonState('paused'); // Show RESUME
+                } else {
+                   if (!isMusicSyncing) {
+                      if (musicBtn.textContent.includes("PLAY")) {
+                         nnViz.resetVisuals();
+                         clockSeconds = 0; // Reset only on fresh start
+                      }
+                      startStandaloneClock(); // Start manual clock
+                   }
+                   updateMusicButtonState('playing'); // Show PAUSE
+                   colorInterval = setInterval(() => { randomizeConnectionColors(); }, 400); 
+                }
+                return;
+            }
+            if (isFlow) {
+                if (nnViz) {
+                    if (nnViz.autoFlowInterval) {
+                        nnViz.stopAutoFlow();
+                        stopStandaloneClock(); // Stop manual clock
+                        updateMusicButtonState('paused'); // Show RESUME
+                    } else {
+                        if (!isMusicSyncing) {
+                            if (musicBtn.textContent.includes("PLAY")) {
+                               nnViz.resetVisuals();
+                               clockSeconds = 0;
+                            }
+                            startStandaloneClock(); // Start manual clock
+                        }
+                        nnViz.startAutoFlow(500); // Standard speed (No Step 2)
+                        updateMusicButtonState('playing'); // Show PAUSE
+                    }
+                }
                 return;
             }
 
-            const selectedValue = musicSelect.value;
-            let success = false;
+            // 2. Playback / Pause / Resume
+            if (!isMusicSyncing) {
+                if (colorInterval) { clearInterval(colorInterval); colorInterval = null; }
+                if (nnViz && nnViz.autoFlowInterval) nnViz.stopAutoFlow();
+                
+                try {
+                    isLoading = true;
+                    updateMusicButtonState('loading');
+                    
+                    if (nnAudio) nnAudio.initContext();
 
-            if (selectedValue === "default") {
-                success = await startMusicVisualizer("music/music.mp3");
-            } else if (selectedValue === "inaban") {
-                success = await startMusicVisualizer("music/Speedy Gonzalo - Inaban.mp3");
-            } else if (selectedValue === "custom") {
-                musicInput.click();
-                return; // Wait for file input change
-            }
-            
-            if(!success && selectedValue !== "custom") {
-                 alert("음악 재생 실패");
+                    let url = "music/music.mp3";
+                    if (isRandom) {
+                       url = "music/Speedy Gonzalo - Inaban.mp3";
+                       if (nnViz) nnViz.setVizMode('random');
+                    } else if (isNeural) {
+                       if (nnViz) nnViz.setVizMode('propagation');
+                    }
+
+                    await startMusicVisualizer(url);
+                } catch (err) {
+                    console.error("Playback failed:", err);
+                    updateMusicButtonState('stopped');
+                } finally {
+                    isLoading = false;
+                }
+            } else {
+                // TOGGLE PAUSE/RESUME for Music
+                if (nnAudio.state === 'running') {
+                    nnAudio.pause();
+                    updateMusicButtonState('paused');
+                } else {
+                    nnAudio.resume();
+                    updateMusicButtonState('playing');
+                }
             }
         });
 
-        musicSelect.addEventListener("change", () => {
-             if (musicSelect.value === "custom") {
-                 musicInput.click();
-             }
-        });
+        if (stopBtn) {
+            stopBtn.addEventListener("click", stopMusicVisualizer);
+        }
+
+        // Keep Select for backward compatibility if it exists
+        if (musicSelect) {
+            musicSelect.addEventListener("change", () => {
+                if (musicSelect.value === "custom") {
+                    musicInput.click();
+                }
+            });
+        }
 
         musicInput.addEventListener("change", (e) => {
             const file = e.target.files[0];
@@ -106,56 +228,24 @@ function randomizeConnectionColors() {
     if (typeof playSound === "function") playSound("click");
 }
 
-function toggleVizMode() {
-    if (!nnViz || !vizModeBtn) return;
-
-    const currentMode = nnViz.getVizMode();
-    
-    if (currentMode === 'propagation') {
-        // Switch to Random
-        nnViz.setVizMode('random');
-        vizModeBtn.textContent = "🎲 Random";
-        vizModeBtn.style.background = "linear-gradient(135deg, #fdcb6e 0%, #e17055 100%)";
-    } else {
-        // Switch to Neural (Propagation)
-        nnViz.setVizMode('propagation');
-        vizModeBtn.textContent = "🧠 Neural";
-        vizModeBtn.style.background = "linear-gradient(135deg, #00b894 0%, #55efc4 100%)";
-    }
-    
-    if (typeof playSound === "function") playSound("click");
-}
 
 function toggleAutoFlow() {
     if (!nnViz) return;
 
     if (nnViz.autoFlowInterval) {
-        // Stop Flow
         nnViz.stopAutoFlow();
-        if (nnAutoBtn) {
-            nnAutoBtn.textContent = "AUTO FLOW";
-            nnAutoBtn.style.background = "linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%)";
-        }
-        renderNetwork(); // Visually reset
     } else {
-        // Start Flow
         if (isMusicSyncing) stopMusicVisualizer(); // Exclusive mode
 
-        if (nnAutoBtn) {
-            nnAutoBtn.textContent = "STOP FLOW";
-            nnAutoBtn.style.background = "linear-gradient(135deg, #ff7675 0%, #d63031 100%)";
-        }
-
         const startFlow = () => {
-            const speedVal = parseInt(document.getElementById("nnSpeed").value);
+            const speedVal = parseInt(speedSlider ? speedSlider.value : 400);
             nnViz.startAutoFlow(speedVal);
         };
 
         startFlow();
 
-        const speedInput = document.getElementById("nnSpeed");
-        if (speedInput) {
-            speedInput.oninput = (e) => {
+        if (speedSlider) {
+            speedSlider.oninput = (e) => {
                 if (nnViz.autoFlowInterval) nnViz.startAutoFlow(parseInt(e.target.value));
             };
         }
@@ -169,16 +259,15 @@ function toggleAutoFlow() {
 
 async function startMusicVisualizer(url) {
     if (nnViz && nnViz.autoFlowInterval) toggleAutoFlow();
+    
+    // Reset if already syncing
     if (isMusicSyncing) stopMusicVisualizer();
-
-    isMusicSyncing = true;
-    updateMusicButtonState(true);
 
     const success = await nnAudio.loadFromUrl(url);
     if (success) {
+        isMusicSyncing = true;
+        updateMusicButtonState('playing');
         animateViz();
-    } else {
-        stopMusicVisualizer();
     }
     return success;
 }
@@ -187,43 +276,89 @@ async function startMusicVisualizerFromFile(file) {
     if (nnViz && nnViz.autoFlowInterval) toggleAutoFlow();
     if (isMusicSyncing) stopMusicVisualizer();
 
-    isMusicSyncing = true;
-    updateMusicButtonState(true);
-
     const success = await nnAudio.loadFromFile(file);
     if (success) {
+        isMusicSyncing = true;
+        updateMusicButtonState('playing');
         animateViz();
     } else {
-        stopMusicVisualizer();
         alert("파일을 재생할 수 없습니다.");
     }
 }
 
 function stopMusicVisualizer() {
     isMusicSyncing = false;
+    clockSeconds = 0; // Reset manual clock
+    stopStandaloneClock();
+
     if (nnAudio) nnAudio.stop();
     
+    if (colorInterval) {
+        clearInterval(colorInterval);
+        colorInterval = null;
+    }
+    
+    if (nnViz) {
+        nnViz.stopAutoFlow();
+    }
+
     if (animationId) {
         cancelAnimationFrame(animationId);
         animationId = null;
     }
     
-    updateMusicButtonState(false);
-    
+    updateMusicButtonState('stopped');
     
     if (nnViz) {
         nnViz.resetVisuals();
     }
 }
 
-function updateMusicButtonState(isPlaying) {
+// Manual Clock Helpers for Tool Modes (RANDOM COLOR, AIR FLOW)
+function startStandaloneClock() {
+    if (standaloneClockInterval) clearInterval(standaloneClockInterval);
+    standaloneClockInterval = setInterval(() => {
+        clockSeconds++;
+        const mins = Math.floor(clockSeconds / 60).toString().padStart(2, '0');
+        const secs = (clockSeconds % 60).toString().padStart(2, '0');
+        if (nnViz) nnViz.updateTimer(`${mins}:${secs}`);
+    }, 1000);
+}
+
+function stopStandaloneClock() {
+    if (standaloneClockInterval) {
+        clearInterval(standaloneClockInterval);
+        standaloneClockInterval = null;
+    }
+}
+
+function updateMusicButtonState(state) {
     if (!musicBtn) return;
-    if (isPlaying) {
-        musicBtn.textContent = "⏹ STOP MUSIC";
-        musicBtn.style.background = "linear-gradient(135deg, #ff7675 0%, #d63031 100%)";
-    } else {
-        musicBtn.textContent = "🎵 MUSIC SYNC";
-        musicBtn.style.background = "linear-gradient(135deg, #FF0080 0%, #7928CA 100%)";
+
+    switch(state) {
+        case 'loading':
+            musicBtn.textContent = "⌛ LOADING...";
+            musicBtn.style.background = "#555";
+            musicBtn.style.cursor = "not-allowed";
+            break;
+        case 'playing':
+            musicBtn.textContent = "⏸ PAUSE";
+            musicBtn.style.background = "linear-gradient(135deg, #f39c12 0%, #e67e22 100%)";
+            musicBtn.style.cursor = "pointer";
+            if (stopBtn) stopBtn.classList.add("visible");
+            break;
+        case 'paused':
+            musicBtn.textContent = "▶️ RESUME";
+            musicBtn.style.background = "linear-gradient(135deg, #27ae60 0%, #2ecc71 100%)";
+            musicBtn.style.cursor = "pointer";
+            break;
+        case 'stopped':
+        default:
+            musicBtn.textContent = "▶️ PLAY";
+            musicBtn.style.background = "linear-gradient(135deg, #0984e3 0%, #6c5ce7 100%)";
+            musicBtn.style.cursor = "pointer";
+            if (stopBtn) stopBtn.classList.remove("visible");
+            break;
     }
 }
 
@@ -233,17 +368,14 @@ function updateMusicButtonState(isPlaying) {
 
 
 function animateViz() {
+    if (!isMusicSyncing) return;
+    
     animationId = requestAnimationFrame(animateViz);
     
-    // Always check timer updates if audio is playing (or trying to)
-    if (nnAudio && nnAudio.isPlaying) {
-         // Get timer data even if not syncing visuals fully
+    if (nnAudio) {
          const audioData = nnAudio.getFrequencyData();
-         
-         if (!isMusicSyncing) return; // Only stop visualization updates
-         
          // 2. Delegate Visualization to Engine
-         if (nnViz) nnViz.updateFromAudioData(audioData);
+         if (nnViz && audioData) nnViz.updateFromAudioData(audioData);
     }
 }
 

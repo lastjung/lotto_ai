@@ -245,6 +245,12 @@ window.addEventListener('load', () => {
             initAudio();
             soundEnabled = !soundEnabled;
             soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+            
+            // Sync with Neural Audio Engine (Music Visualizer)
+            if (typeof nnAudio !== 'undefined' && nnAudio) {
+                nnAudio.setMute(!soundEnabled);
+            }
+
             if (soundEnabled) playSound('click');
         });
     }
