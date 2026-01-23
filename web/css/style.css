@@ -1043,11 +1043,21 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
 /* Mode Toggle Group (Segmented UI) */
 .mode-toggle-group {
     display: flex;
+    align-items: center; /* Vertical alignment fix */
     background: rgba(0, 0, 0, 0.4);
     border-radius: 14px;
     padding: 4px;
-    gap: 4px;
+    gap: 12px; /* Increased gap for better spacing */
     border: 1px solid var(--nn-glass-border);
+}
+
+.mode-toggle-group input[type="radio"] {
+    margin: 0;
+    vertical-align: middle;
+    cursor: pointer;
+    accent-color: var(--nn-primary); /* Modern browser support */
+    width: 16px;
+    height: 16px;
 }
 
 .main-header-controls {
