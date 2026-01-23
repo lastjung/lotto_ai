@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700&display=swap');
 
 :root {
   --nn-primary: #00f2fe;
@@ -18,7 +18,7 @@
 body {
   min-height: 100vh;
   background: radial-gradient(circle at 50% 0%, #111827 0%, #030712 100%);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Exo 2', sans-serif;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -28,13 +28,15 @@ body {
 }
 
 h1 {
-  font-size: 1.8rem;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2rem;
   margin-bottom: 10px;
-  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-  background: linear-gradient(90deg, #ffd700, #ffaa00);
+  text-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
+  background: linear-gradient(90deg, #00f2fe, #4facfe);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  letter-spacing: 2px;
 }
 
 .subtitle {
@@ -966,12 +968,13 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
 }
 
 .play-btn {
+    font-family: 'Orbitron', sans-serif;
     width: 160px;
     height: 48px;
     background: linear-gradient(135deg, var(--nn-primary) 0%, var(--nn-secondary) 100%) !important;
-    font-size: 0.95rem !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.5px;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px;
     color: #030712 !important;
     border: none !important;
     border-radius: 14px !important;
@@ -988,13 +991,15 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
 }
 
 .stop-btn {
+    font-family: 'Orbitron', sans-serif;
     width: 100px;
     height: 48px;
     background: rgba(239, 68, 68, 0.1) !important;
     color: #ef4444 !important;
     border: 1px solid rgba(239, 68, 68, 0.2) !important;
-    font-size: 0.9rem !important;
-    font-weight: 600 !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px;
     border-radius: 14px !important;
     visibility: hidden;
     opacity: 0;
@@ -1074,10 +1079,11 @@ input[type="range"].nn-speed-slider::-webkit-slider-thumb:hover {
 }
 
 .settings-header h3 {
-    font-size: 1.5rem;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.3rem;
     color: #f8fafc;
-    font-weight: 700;
-    letter-spacing: -0.5px;
+    font-weight: 600;
+    letter-spacing: 1px;
 }
 
 .close-btn {
@@ -1169,6 +1175,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .apply-btn {
+    font-family: 'Orbitron', sans-serif;
     width: 100%;
     padding: 16px;
     background: var(--nn-primary);
@@ -1176,7 +1183,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
     border: none;
     border-radius: 14px;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 0.9rem;
+    letter-spacing: 1.5px;
     cursor: pointer;
     margin-top: 10px;
     transition: all 0.3s ease;
